@@ -29,10 +29,13 @@
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<DelaySign>False</DelaySign>
 		<IsPackable>true</IsPackable>
-		<Title>XiaoFeng</Title>
+		<Title>XiaoFeng.Mqtt</Title>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />
 		<None Include="LICENSE" Pack="true" PackagePath="\" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\XiaoFeng\XiaoFeng.csproj" />
 	</ItemGroup>
 </Project>
