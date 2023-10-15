@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Diagnostics.SymbolStore;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -303,6 +305,10 @@ namespace XiaoFeng.Mqtt.Client
                 case PacketType.DISCONNECT:
                     disconnPacket = new DisconnectPacket(bytes, this.ClientOptions.ProtocolVersion);
                     result = new ResultPacket(ResultType.Success, $"Received {disconnPacket.PacketType} from server ({disconnPacket}).");
+                    if (disconnPacket.ServerReference.IsNotNullOrEmpty())
+                    {
+                        ServerMovedAsync(disconnPacket.ServerReference).ConfigureAwait(false).GetAwaiter();
+                    }
                     break;
                 case PacketType.PINGRESP:
                     var pingRespPacket = new PingRespPacket(bytes, this.ClientOptions.ProtocolVersion);
@@ -382,6 +388,11 @@ namespace XiaoFeng.Mqtt.Client
             if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED)
             {
                 OnError?.Invoke(this, $"Connect failed: [{connAct.ReasonCode}] [{connAct.ReasonString}]");
+                if (connAct.ServerReference.IsNotNullOrEmpty())
+                {
+                    await ServerMovedAsync(connAct.ServerReference).ConfigureAwait(false);
+                    return await Task.FromResult(connAct);
+                }
             }
             else
             {
@@ -806,7 +817,38 @@ namespace XiaoFeng.Mqtt.Client
                 list.Add(t.Value);
             });
             return await this.SubscributeAsync(list).ConfigureAwait(false);
-        }   
+        }
+        #endregion
+
+        #region 服务器转移到其它服务器
+        /// <summary>
+        /// 服务器转移到其它服务器
+        /// </summary>
+        /// <param name="serverReference">服务器信息</param>
+        /// <returns></returns>
+        private async Task ServerMovedAsync(string serverReference)
+        {
+            var reader = new StreamReader(serverReference);
+            var line = reader.ReadLine();
+            while (line.IsNotNullOrEmpty())
+            {
+                OnMessage?.Invoke(new ResultPacket(ResultType.Success, $"Server reference: {line}"));
+                var hostport = line.Trim().Split(':');
+                if (line.Length > 1)
+                {
+                    this.NetUri.Host = hostport[0];
+                    this.NetUri.Port = hostport[1].ToCast(1883);
+                }
+                else
+                {
+                    this.NetUri.Host = line.Trim();
+                    this.NetUri.Port = 1883;
+                }
+                this.Stop();
+                await this.ConnectAsync().ConfigureAwait(false);
+                break;
+            }
+        }
         #endregion
 
         #endregion

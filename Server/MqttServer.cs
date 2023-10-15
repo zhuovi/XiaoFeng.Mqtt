@@ -233,6 +233,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 接收数据
         /// </summary>
+        /// <param name="client">客户端</param>
         /// <param name="bytes">字节流</param>
         private async void ReceiveMessage(ISocketClient client, byte[] bytes)
         {
@@ -557,6 +558,12 @@ namespace XiaoFeng.Mqtt.Server
                     result.Message = DisconnPacket.ReasonString;
                     return result;
                 }
+            }
+
+            if (this.ServerOptions.ServerReference.IsNotNullOrEmpty())
+            {
+                AckPacket.ServerReference = this.ServerOptions.ServerReference;
+                AckPacket.ReasonCode = ReasonCode.SERVER_MOVED;
             }
 
             AckPacket.RetainAvailable = this.ServerOptions.RetainAvailable;
@@ -1226,6 +1233,26 @@ namespace XiaoFeng.Mqtt.Server
         {
             if (this.MqttServerCredentials == null) return false;
             return this.MqttServerCredentials.TryRemove(userName, out var _);
+        }
+        #endregion
+
+        #region 服务器转移到其它服务器
+        /// <summary>
+        /// 服务器转移到其它服务器
+        /// </summary>
+        /// <param name="client">MQTT客户端</param>
+        /// <returns></returns>
+        public async Task<ResultPacket> ServerMovedAsync(ISocketClient client)
+        {
+            var result = new ResultPacket(ResultType.Error, $"Server Moved {this.ServerOptions.ServerReference}.");
+            var DisconnPacket = new DisconnectPacket()
+            {
+                ReasonCode = ReasonCode.SERVER_MOVED,
+                ReasonString = result.Message
+            };
+            result.MqttPacket = DisconnPacket;
+            await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
+            return result;
         }
         #endregion
 

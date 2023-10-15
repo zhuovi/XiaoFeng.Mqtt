@@ -170,6 +170,10 @@ namespace XiaoFeng.Mqtt.Server
         /// 保存主题消息过期时间 单位秒
         /// </summary>
         public int TopicFilterExpireInterval { get; set; } = 600;
+        /// <summary>
+        /// 服务器转移信息
+        /// </summary>
+        public string ServerReference { get; set; }
         #endregion
 
         #region 方法
