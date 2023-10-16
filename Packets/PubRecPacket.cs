@@ -44,19 +44,13 @@ namespace XiaoFeng.Mqtt.Packets
         /// 设置缓存数据
         /// </summary>
         /// <param name="buffer">缓存数据</param>
-        public PubRecPacket(byte[] buffer) : base(buffer)
-        {
-            if (buffer == null || buffer.Length == 0) return;
-        }
+        public PubRecPacket(byte[] buffer) : base(buffer) { }
         /// <summary>
         /// 设置缓存数据
         /// </summary>
         /// <param name="buffer">缓存数据</param>
         /// <param name="protocolVersion">协议版本</param>
-        public PubRecPacket(byte[] buffer, MqttProtocolVersion protocolVersion) : base(buffer, protocolVersion)
-        {
-            if (buffer == null || buffer.Length == 0) return;
-        }
+        public PubRecPacket(byte[] buffer, MqttProtocolVersion protocolVersion) : base(buffer, protocolVersion) { }
         #endregion
 
         #region 属性
@@ -64,7 +58,7 @@ namespace XiaoFeng.Mqtt.Packets
         #endregion
 
         #region 方法
-        
+
         #endregion
     }
 }

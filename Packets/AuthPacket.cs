@@ -43,8 +43,7 @@ namespace XiaoFeng.Mqtt.Packets
         /// </summary>
         /// <param name="buffer">缓存数据</param>
         public AuthPacket(byte[] buffer) : base(buffer)
-        {
-            if (buffer == null || buffer.Length == 0) return;
+        {            
         }
         /// <summary>
         /// 设置缓存数据
@@ -53,7 +52,6 @@ namespace XiaoFeng.Mqtt.Packets
         /// <param name="protocolVersion">协议版本</param>
         public AuthPacket(byte[] buffer, MqttProtocolVersion protocolVersion) : base(buffer, protocolVersion)
         {
-            if (buffer == null || buffer.Length == 0) return;
         }
         #endregion
 

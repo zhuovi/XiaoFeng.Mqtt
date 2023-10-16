@@ -52,20 +52,13 @@ namespace XiaoFeng.Mqtt.Packets
         /// 设置缓存数据
         /// </summary>
         /// <param name="buffer">缓存数据</param>
-        public ConnectPacket(byte[] buffer) : base(buffer)
-        {
-            if (buffer == null || buffer.Length == 0) return;
-        }
+        public ConnectPacket(byte[] buffer) : base(buffer) { }
         /// <summary>
         /// 设置缓存数据
         /// </summary>
         /// <param name="buffer">缓存数据</param>
         /// <param name="protocolVersion">协议版本</param>
-        public ConnectPacket(byte[] buffer, MqttProtocolVersion protocolVersion) : base(buffer, protocolVersion)
-        {
-            if (this.ProtocolVersion == MqttProtocolVersion.Unknown) this.ProtocolVersion = MqttProtocolVersion.V500;
-            if (buffer == null || buffer.Length == 0) return;
-        }
+        public ConnectPacket(byte[] buffer, MqttProtocolVersion protocolVersion) : base(buffer, protocolVersion) { }
         #endregion
 
         #region 属性

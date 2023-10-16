@@ -40,19 +40,13 @@ namespace XiaoFeng.Mqtt.Packets
         /// 设置缓存数据
         /// </summary>
         /// <param name="buffer">缓存数据</param>
-        public PingReqPacket(byte[] buffer) : base(buffer)
-        {
-            if (buffer == null || buffer.Length == 0) return;
-        }
+        public PingReqPacket(byte[] buffer) : base(buffer) { }
         /// <summary>
         /// 设置缓存数据
         /// </summary>
         /// <param name="buffer">缓存数据</param>
         /// <param name="protocolVersion">协议版本</param>
-        public PingReqPacket(byte[] buffer, MqttProtocolVersion protocolVersion) : base(buffer, protocolVersion)
-        {
-            if (buffer == null || buffer.Length == 0) return;
-        }
+        public PingReqPacket(byte[] buffer, MqttProtocolVersion protocolVersion) : base(buffer, protocolVersion) { }
         #endregion
 
         #region 属性
