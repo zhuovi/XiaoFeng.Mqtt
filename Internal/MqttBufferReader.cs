@@ -50,7 +50,11 @@ namespace XiaoFeng.Mqtt.Internal
         /// <summary>
         /// 缓存数据位置
         /// </summary>
-        public long Position => (long)this.Data?.Position;
+        public long Position
+        {
+            get => (long)this.Data?.Position;
+            set => this.Data.Position = value;
+        }
         /// <summary>
         /// 是否是结束
         /// </summary>
@@ -92,6 +96,7 @@ namespace XiaoFeng.Mqtt.Internal
         {
             if (length <= 0) length = this.Length - this.Position;
             if (length > this.Length - this.Position) length = this.Length - this.Position;
+            if(length==0) return Array.Empty<byte>();
             this.ValidateBufferLength((int)length);
             var bytes = new byte[length];
             this.Data.Read(bytes, 0, (int)length);
@@ -164,20 +169,30 @@ namespace XiaoFeng.Mqtt.Internal
         /// <exception cref="Exception">异常</exception>
         public uint ReadVariableByteInteger()
         {
+            return this.ReadVariableByteInteger(out var _);
+        }
+        /// <summary>
+        /// 读取可变小字节整型数字
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception">异常</exception>
+        public uint ReadVariableByteInteger(out int size)
+        {
             var multiplier = 1;
             var value = 0U;
             byte encodedByte;
-
+            size = 0;
             do
             {
                 encodedByte = (byte)this.ReadByte();
                 value += (uint)((encodedByte & 127) * multiplier);
-                if (multiplier > 128 * 128 * 128)
+                if (multiplier > (128 * 128 * 128))
                 {
                     throw new MqttException("Malformed Remaining Length.");
                 }
                 multiplier *= 128;
-            } while ((encodedByte & 128) != 0);
+                size++;
+            } while ((encodedByte & 128) != 0 && size <= 3);
 
             return value;
         }
@@ -190,7 +205,7 @@ namespace XiaoFeng.Mqtt.Internal
         {
             if (this.Length == 0) throw new Exception("当前缓存流没有数据.");
             var newPosition = this.Position + length;
-            if (this.Length < newPosition) throw new Exception($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length} 字节.");
+            if (this.Length < newPosition) throw new MqttException($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读.");
         }
         #endregion
     }

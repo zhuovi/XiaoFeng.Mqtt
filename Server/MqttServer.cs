@@ -1,19 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
-using XiaoFeng.Mqtt;
 using XiaoFeng.Net;
-using XiaoFeng.Log;
 using XiaoFeng.Mqtt.Packets;
 using XiaoFeng.Mqtt.Internal;
-using System.Net.Sockets;
-using XiaoFeng.FTP;
 using System.Collections.Concurrent;
 
 /****************************************************************
@@ -1159,16 +1151,28 @@ namespace XiaoFeng.Mqtt.Server
         {
             if (!this.Server.Active) this.Start();
             if (packet == null || this.Server.Clients == null || this.Server.Clients.Count == 0) return false;
+            var bytes = packet.ToArray();
             if (client != null && client.Active && client.Connected)
             {
-                return (await client.SendAsync(packet.ToArray(), MessageType.Binary).ConfigureAwait(false)) > 0;
+                var ClientData = client.GetClientData()?.ConnectPacket;
+                if (ClientData == null) return false;
+                MqttHelper.GetPacketSharding(bytes, ClientData.MaximumPacketSize).Each(async bs =>
+                {
+                    await client.SendAsync(bs, MessageType.Binary).ConfigureAwait(false);
+                });
+                return true;
             }
             if (this.Server.Clients.Count == 0) return false;
-            this.Server.Clients.Each(async c =>
+            this.Server.Clients.Each(c =>
             {
-                await c.SendAsync(packet.ToArray(), MessageType.Binary).ConfigureAwait(false);
+                var ClientData = c.GetClientData()?.ConnectPacket;
+                if (ClientData == null) return;
+                MqttHelper.GetPacketSharding(bytes, ClientData.MaximumPacketSize).Each(async bs =>
+                {
+                    await c.SendAsync(bytes, MessageType.Binary).ConfigureAwait(false);
+                });
             });
-            return true;
+            return await Task.FromResult(true);
         }
         #endregion
 

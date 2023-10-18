@@ -184,7 +184,8 @@ namespace XiaoFeng.Mqtt.Packets
                 writer.Write(writerProperty);
                 writerProperty.Dispose();
             }
-            writer.WriteBytes(this.Payload);
+            if (this.Payload != null && this.Payload.Length > 0)
+                writer.WriteBytes(this.Payload);
 
             return true;
         }
@@ -267,7 +268,7 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override string ToString()
         {
-            return $"{this.PacketType}: [PacketIdentifier={this.PacketIdentifier}] [Topic={this.Topic}] [QoS={(int)this.QualityOfServiceLevel}] [Dup={this.Dup}] [Retain={this.Retain}] [MessageExpiryInterval={this.MessageExpiryInterval}] [TopicAlias={this.TopicAlias}] [ResponseTopic={this.ResponseTopic}] [ContentType={this.ContentType}] [PayloadFormatIndicator={(int)this.PayloadFormatIndicator}] [Payload=...({this.Payload?.Length} bytes)]";
+            return $"{this.PacketType}: [PacketIdentifier={this.PacketIdentifier}] [Topic={this.Topic}] [QoS={(int)this.QualityOfServiceLevel}] [Dup={this.Dup}] [Retain={this.Retain}] [MessageExpiryInterval={this.MessageExpiryInterval}] [TopicAlias={this.TopicAlias}] [ResponseTopic={this.ResponseTopic}] [ContentType={this.ContentType}] [PayloadFormatIndicator={(int)this.PayloadFormatIndicator}] [Payload=...({this.Payload?.Length} bytes)] [{this.Payload.GetString()}]";
         }
         #endregion
     }

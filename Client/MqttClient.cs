@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
-using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 using XiaoFeng.Mqtt.Internal;
 using XiaoFeng.Mqtt.Packets;
@@ -110,6 +106,7 @@ namespace XiaoFeng.Mqtt.Client
         /// 我的订阅
         /// </summary>
         public ConcurrentDictionary<string, TopicFilter> TopicFilters { get; set; } = new ConcurrentDictionary<string, TopicFilter>();
+        public PublishPacket PublishPacket { get; set; }
         #endregion
 
         #region 事件
@@ -270,6 +267,50 @@ namespace XiaoFeng.Mqtt.Client
         /// <param name="bytes">字节流</param>
         private void ReceiveMessage(byte[] bytes)
         {
+            if (this.PublishPacket != null)
+            {
+                this.PublishPacket.WriteBuffer(bytes);
+                if (this.PublishPacket.TotalLength > this.PublishPacket.Length)
+                {
+                    return;
+                }
+                else
+                {
+                    this.PublishPacket.UnPacket();
+                    var RemainingBytes = this.PublishPacket.ReadRemainingBytes();
+
+                    OnMessage?.Invoke(new ResultPacket(ResultType.Success, $"Received {this.PublishPacket.PacketType} from server ({this.PublishPacket})."));
+                    DisconnectPacket disPacket;
+                    if (this.PublishPacket.QualityOfServiceLevel == QualityOfServiceLevel.Reserved)
+                    {
+                        disPacket = new DisconnectPacket
+                        {
+                            ReasonCode = ReasonCode.MALFORMED_PACKET,
+                            ReasonString = "PUBLISH QoS is 0x03"
+                        };
+                        OnError?.Invoke(this, disPacket.ReasonString);
+                        //DisconnectAsync(disconnPacket).ConfigureAwait(false).GetAwaiter();
+                        return;
+                    }
+                    if (this.PublishPacket.QualityOfServiceLevel > QualityOfServiceLevel.Reserved)
+                    {
+                        disPacket = new DisconnectPacket
+                        {
+                            ReasonCode = ReasonCode.QOS_NOT_SUPPORTED,
+                            ReasonString = "PUBLISH QoS not supported"
+                        };
+                        OnError?.Invoke(this, disPacket.ReasonString);
+                        DisconnectAsync(disPacket).ConfigureAwait(false).GetAwaiter();
+                        return;
+                    }
+                    OnPublishMessage?.Invoke(this.PublishPacket);
+                    this.PublishPacket = null;
+                    if (RemainingBytes.Length == 0)
+                        return;
+                    else
+                        bytes = RemainingBytes;
+                }
+            }
             var packetType = (PacketType)(bytes[0] >> 4);
             ResultPacket result = null;
             DisconnectPacket disconnPacket;
@@ -277,6 +318,11 @@ namespace XiaoFeng.Mqtt.Client
             {
                 case PacketType.PUBLISH:
                     var publishPacket = new PublishPacket(bytes, this.ClientOptions.ProtocolVersion);
+                    if (publishPacket.IsSharding)
+                    {
+                        this.PublishPacket = publishPacket;
+                        return;
+                    }
                     OnMessage?.Invoke(result = new ResultPacket(ResultType.Success, $"Received {publishPacket.PacketType} from server ({publishPacket})."));
                     if (publishPacket.QualityOfServiceLevel == QualityOfServiceLevel.Reserved)
                     {
@@ -286,7 +332,7 @@ namespace XiaoFeng.Mqtt.Client
                             ReasonString = "PUBLISH QoS is 0x03"
                         };
                         OnError?.Invoke(this, disconnPacket.ReasonString);
-                        DisconnectAsync(disconnPacket).ConfigureAwait(false).GetAwaiter();
+                        //DisconnectAsync(disconnPacket).ConfigureAwait(false).GetAwaiter();
                         return;
                     }
                     if (publishPacket.QualityOfServiceLevel > QualityOfServiceLevel.Reserved)
@@ -755,7 +801,11 @@ namespace XiaoFeng.Mqtt.Client
 
             OnMessage?.Invoke(new ResultPacket(packet, ResultType.Success, $"Sending {packet.PacketType} to server ({packet})."));
 
-            return await this.Client.SendAsync(packet.ToArray(), MessageType.Binary).ConfigureAwait(false) > 0;
+            MqttHelper.GetPacketSharding(packet.ToArray(), this.ClientOptions.MaximumPacketSize).Each(async bs =>
+            {
+                await this.Client.SendAsync(bs, MessageType.Binary).ConfigureAwait(false);
+            });
+            return true;
         }
         #endregion
 

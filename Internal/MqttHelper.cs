@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
+using System.IO;
 
 /****************************************************************
 *  Copyright © (2023) www.eelf.cn All Rights Reserved.          *
@@ -92,6 +91,31 @@ namespace XiaoFeng.Mqtt.Internal
                 if (topicName.IsMatch(@"^" + topic)) return true;
             }
             return false;
+        }
+        /// <summary>
+        /// 获取包分片
+        /// </summary>
+        /// <param name="bytes">包数据</param>
+        /// <param name="packetSize">分片包大小</param>
+        /// <returns></returns>
+        public static List<byte[]> GetPacketSharding(byte[] bytes, uint packetSize)
+        {
+            var list = new List<byte[]>();
+            if (bytes == null || bytes.Length == 0) return list;
+            if (packetSize == 0 || bytes.Length <= packetSize)
+            {
+                list.Add(bytes);
+                return list;
+            }
+            var ms = new MemoryStream(bytes);
+            do
+            {
+                var length = ms.Position + packetSize > ms.Length ? (ms.Length - ms.Position) : packetSize;
+                var subBytes = new byte[length];
+                ms.Read(subBytes, 0, subBytes.Length);
+                list.Add(subBytes);
+            } while (ms.Position < ms.Length);
+            return list;
         }
         #endregion
     }

@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Linq;
 using XiaoFeng.Mqtt.Internal;
 
 /****************************************************************
@@ -60,6 +59,26 @@ namespace XiaoFeng.Mqtt.Packets
 
         #region 属性
         /// <summary>
+        /// 数据总长
+        /// </summary>
+        private long _TotalLength = 0;
+        /// <summary>
+        /// 数据总长
+        /// </summary>
+        public long TotalLength { get { return _TotalLength; } }
+        /// <summary>
+        /// 当前长度
+        /// </summary>
+        public long Length => this.Reader.Length - this.Reader.Position;
+        /// <summary>
+        /// 是否有分片
+        /// </summary>
+        private bool _IsSharding = false;
+        /// <summary>
+        /// 是否有分片
+        /// </summary>
+        public bool IsSharding => this._IsSharding;
+        /// <summary>
         /// 缓存读取器
         /// </summary>
         private MqttBufferReader Reader { get; set; }
@@ -95,6 +114,11 @@ namespace XiaoFeng.Mqtt.Packets
 
         #region 方法
         /// <summary>
+        /// 读取剩下字节
+        /// </summary>
+        /// <returns></returns>
+        public byte[] ReadRemainingBytes() => this.Reader.ReadBytes();
+        /// <summary>
         /// 获取字节数组
         /// </summary>
         /// <returns></returns>
@@ -115,15 +139,33 @@ namespace XiaoFeng.Mqtt.Packets
         /// </summary>
         public virtual void UnPacket()
         {
+            this.Reader.Position = 0;
             var flag = this.Reader.ReadByte();
 
             this.PacketType = (PacketType)(flag >> 4);
             this._FixedFlags = flag & 0x0F;
             this.SetFlags(flag);
-            var length = this.Reader.ReadVariableByteInteger();
+            var length = this.Reader.ReadVariableByteInteger(out var size);
             if (length == 0) return;
+            this._TotalLength = length;
+            if (length > this.Reader.Length - this.Reader.Position)
+            {   
+                this._IsSharding = true;
+                return;
+            }
             var reader = new MqttBufferReader(this.Reader.ReadBytes(length));
             if (this.ReadBuffer(reader)) return;
+        }
+        /// <summary>
+        /// 写buffer
+        /// </summary>
+        /// <param name="buffer">数据</param>
+        public void WriteBuffer(byte[] buffer)
+        {
+            var position = this.Reader.Position;
+            this.Reader.Seek(0, SeekOrigin.Begin);
+            this.Reader.SetBuffer(this.Reader.ReadBytes().Concat(buffer).ToArray());
+            this.Reader.Position = position;
         }
         /// <summary>
         /// 写流

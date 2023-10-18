@@ -29,44 +29,48 @@ XiaoFeng.Mqtt generator with [XiaoFeng.Mqtt](https://github.com/zhuovi/XiaoFeng.
 .NET CLI
 
 ```
-$ dotnet add package XiaoFeng.Mqtt --version 1.0.0
+$ dotnet add package XiaoFeng.Mqtt --version 1.0.1
 ```
 
 Package Manager
 
 ```
-PM> Install-Package XiaoFeng.Mqtt --Version 1.0.0
+PM> Install-Package XiaoFeng.Mqtt --Version 1.0.1
 ```
 
 PackageReference
 
 ```
-<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.0" />
+<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.1" />
 ```
 
 Paket CLI
 
 ```
-> paket add XiaoFeng.Mqtt --version 1.0.0
+> paket add XiaoFeng.Mqtt --version 1.0.1
 ```
 
 Script & Interactive
 
 ```
-> #r "nuget: XiaoFeng.Mqtt, 1.0.0"
+> #r "nuget: XiaoFeng.Mqtt, 1.0.1"
 ```
 
 Cake
 
 ```
 // Install XiaoFeng.Mqtt as a Cake Addin
-#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.0
+#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.1
 
 // Install XiaoFeng.Mqtt as a Cake Tool
-#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.0
+#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.1
 ```
 
 # 版本更新
+
+## 2023-10-18   v 1.0.1
+
+增加粘包分包处理;
 
 ## 2023-10-14   v 1.0.0
 
