@@ -94,7 +94,11 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// MQTT服务器凭证
         /// </summary>
-        public ICollection<IMqttServerCredential> Credentials=> this.MqttServerCredentials?.Values;
+        public ICollection<IMqttServerCredential> Credentials => this.MqttServerCredentials?.Values;
+        /// <summary>
+        /// 订阅主题客户端
+        /// </summary>
+        private ConcurrentDictionary<string, List<ISocketClient>> MqttServerTopicClients { get; set; }
         #endregion
 
         #region 事件
@@ -142,6 +146,8 @@ namespace XiaoFeng.Mqtt.Server
                 this.MqttServerCredentials = new ConcurrentDictionary<string, IMqttServerCredential>();
             if (this.MqttServerTopicMessages == null)
                 this.MqttServerTopicMessages = new ConcurrentDictionary<string, IMqttServerTopicMessage>();
+            if (this.MqttServerTopicClients == null)
+                this.MqttServerTopicClients = new ConcurrentDictionary<string, List<ISocketClient>>();
             if (this.Server != null) return;
             this.Server = new SocketServer()
             {
@@ -171,20 +177,33 @@ namespace XiaoFeng.Mqtt.Server
             };
             this.Server.OnDisconnected += (c, e) =>
             {
-                this.OnDisconnected?.Invoke(c);
+                Task.Run(() =>
+                {
+                    this.RemoveTopicClientAsync(c).ConfigureAwait(false).GetAwaiter();
+                    this.OnDisconnected?.Invoke(c);
+                });
             };
             this.Server.OnError += (o, e) =>
             {
-                this.OnError?.Invoke(this, e.Message);
+                Task.Run(() =>
+                {
+                    this.OnError?.Invoke(this, e.Message);
+                });
             };
             this.Server.OnNewConnection += (c, e) =>
             {
-                c.InitClientData();
-                this.OnConnected?.Invoke(c);
+                Task.Run(() =>
+                {
+                    c.InitClientData();
+                    this.OnConnected?.Invoke(c);
+                });
             };
             this.Server.OnMessageByte += (c, m, e) =>
             {
-                this.ReceiveMessage(c, m);
+                Task.Run(() =>
+                {
+                    this.ReceiveMessage(c, m);
+                });
             };
         }
         #endregion
@@ -240,7 +259,7 @@ namespace XiaoFeng.Mqtt.Server
             {
                 case PacketType.CONNECT:
                     var connPacket = new ConnectPacket(bytes, ProtocolVersion);
-                    OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, $"New client connected from {client.EndPoint} as {connPacket.ClientId} ({connPacket})."));
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"New client connected from {client.EndPoint} as {connPacket.ClientId} ({connPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var connActResult = await this.ConnActAsync(client, connPacket).ConfigureAwait(false);
                     if (connActResult.ResultType == ResultType.Error)
                     {
@@ -251,14 +270,14 @@ namespace XiaoFeng.Mqtt.Server
                     else
                     {
                         if (connPacket.WillMessage == null || connPacket.WillMessage.Length == 0)
-                            OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, "No WillMessage specified."));
+                            OnMessageAsync(client, new ResultPacket(ResultType.Success, "No WillMessage specified.")).ConfigureAwait(false).GetAwaiter();
                         result = new ResultPacket(connActResult.MqttPacket, ResultType.Success, $"Sending CONNACK to {connPacket.ClientId} ({connActResult.MqttPacket}).");
                         ClientData.ConnectPacket = connPacket;
                     }
                     break;
                 case PacketType.AUTH:
                     var authPacket = new AuthPacket(bytes, ProtocolVersion);
-                    OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, $"Received AUTH from {client.EndPoint} as {clientId} ({authPacket})."));
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received AUTH from {client.EndPoint} as {clientId} ({authPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var processAuthResult = await ProcessAuthPacketAsync(client, authPacket).ConfigureAwait(false);
                     if (processAuthResult.ResultType == ResultType.Error)
                     {
@@ -267,7 +286,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.DISCONNECT:
                     var disconnPacket = new DisconnectPacket(bytes, ProtocolVersion);
-                    OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, $"Received DISCONNECT from {client.EndPoint} as {clientId} ({disconnPacket})."));
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received DISCONNECT from {client.EndPoint} as {clientId} ({disconnPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var processDisconnResult = await ProcessDisconnectAsync(client, disconnPacket).ConfigureAwait(false);
                     if (processDisconnResult.ResultType == ResultType.Error)
                     {
@@ -280,7 +299,7 @@ namespace XiaoFeng.Mqtt.Server
                     return;
                 case PacketType.PINGREQ:
                     var pingReqPacket = new PingReqPacket(bytes, ProtocolVersion);
-                    OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, $"Received PINGREQ from {client.EndPoint} as {clientId} ({pingReqPacket})."));
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received PINGREQ from {client.EndPoint} as {clientId} ({pingReqPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var pingRespResult = await PingRespAsync(client, pingReqPacket).ConfigureAwait(false);
                     if (pingRespResult.ResultType == ResultType.Error)
                     {
@@ -294,7 +313,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.PUBLISH:
                     var publishPacket = new PublishPacket(bytes, ProtocolVersion);
-                    OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, $"Received PUBLISH from {client.EndPoint} as {clientId} ({publishPacket})."));
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received PUBLISH from {client.EndPoint} as {clientId} ({publishPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var publishResult = await PubAckAsync(client, publishPacket).ConfigureAwait(false);
                     if (publishResult.ResultType == ResultType.Error)
                     {
@@ -308,7 +327,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.PUBREL:
                     var RelPacket = new PubRelPacket(bytes, ProtocolVersion);
-                    OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, $"Received {RelPacket.PacketType} from {client.EndPoint} as {clientId} ({RelPacket})."));
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received {RelPacket.PacketType} from {client.EndPoint} as {clientId} ({RelPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var pubcompResult = await PubCompAsync(client, RelPacket).ConfigureAwait(false);
                     if (pubcompResult.ResultType == ResultType.Error)
                     {
@@ -322,7 +341,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.SUBSCRIBE:
                     var subPacket = new SubscribePacket(bytes, ProtocolVersion);
-                    OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, $"Received {subPacket.PacketType} from {client.EndPoint} as {clientId} ({subPacket})."));
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received {subPacket.PacketType} from {client.EndPoint} as {clientId} ({subPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var subActResult = await this.SubActAsync(client, subPacket).ConfigureAwait(false);
                     if (subActResult.ResultType == ResultType.Error)
                     {
@@ -336,7 +355,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.UNSUBSCRIBE:
                     var unsubPacket = new UnsubscribePacket(bytes, ProtocolVersion);
-                    OnMessage?.Invoke(client, new ResultPacket(ResultType.Success, $"Received  {unsubPacket.PacketType}  from {client.EndPoint} as {clientId} ({unsubPacket})."));
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received  {unsubPacket.PacketType}  from {client.EndPoint} as {clientId} ({unsubPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var unsubActResult = await this.UnsubAckAsync(client, unsubPacket).ConfigureAwait(false);
                     if (unsubActResult.ResultType == ResultType.Error)
                     {
@@ -352,7 +371,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
             }
             if (result != null && result.MqttPacket?.PacketType > 0)
-                this.OnMessage?.Invoke(client, result);
+                OnMessageAsync(client, result).ConfigureAwait(false).GetAwaiter();
         }
         #endregion
 
@@ -511,7 +530,7 @@ namespace XiaoFeng.Mqtt.Server
                 };
                 result.MqttPacket = DisconnPacket;
                 await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
-                OnMessage?.Invoke(client, new ResultPacket(DisconnPacket, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}"));
+                OnMessageAsync(client, new ResultPacket(DisconnPacket, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}")).ConfigureAwait(false).GetAwaiter();
                 result.Message = DisconnPacket.ReasonString;
                 return result;
             }
@@ -546,7 +565,7 @@ namespace XiaoFeng.Mqtt.Server
                 {
                     result.MqttPacket = DisconnPacket;
                     await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
-                    OnMessage?.Invoke(client, new ResultPacket(DisconnPacket,ResultType.Success, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}"));
+                    OnMessageAsync(client, new ResultPacket(DisconnPacket,ResultType.Success, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}")).ConfigureAwait(false).GetAwaiter();
                     result.Message = DisconnPacket.ReasonString;
                     return result;
                 }
@@ -665,6 +684,7 @@ namespace XiaoFeng.Mqtt.Server
             var reasonCodes = new List<ReasonCode>();
             var AddTopicFilters = new List<TopicFilter>();
             var index = 0;
+            var topics = new List<string>();
             do
             {
                 var t = packet.TopicFilters[index++];
@@ -681,6 +701,7 @@ namespace XiaoFeng.Mqtt.Server
                         ClientData.TopicFilters.Add(t);
                         AddTopicFilters.Add(t);
                         reasonCodes.Add(ReasonCode.SUCCESS);
+                        topics.Add(t.Topic);
                     }
                 }
                 else
@@ -702,6 +723,7 @@ namespace XiaoFeng.Mqtt.Server
                     this.SendPublishAsync(client, t).ConfigureAwait(false).GetAwaiter();
                 });
             }
+            AddTopicClientAsync(client,topics).ConfigureAwait(false).GetAwaiter();
             return result;
         }
         #endregion
@@ -752,6 +774,7 @@ namespace XiaoFeng.Mqtt.Server
                 return result;
             }
             var reasonCodes = new List<ReasonCode>();
+            var topics = new List<string>();
             var index = 0;
             do
             {
@@ -763,10 +786,12 @@ namespace XiaoFeng.Mqtt.Server
                     {
                         ClientData.TopicFilters.RemoveAt(anyIndex);
                         reasonCodes.Add(ReasonCode.SUCCESS);
+                        topics.Add(t.Topic);
                     }
                     else
                     {
-                        reasonCodes.Add(ReasonCode.NO_SUBSCRIPTION_EXISTED); continue;
+                        reasonCodes.Add(ReasonCode.NO_SUBSCRIPTION_EXISTED);
+                        continue;
                     }
                 }
                 else
@@ -781,6 +806,7 @@ namespace XiaoFeng.Mqtt.Server
             result.ResultType = ResultType.Success;
             result.MqttPacket = AckPacket;
             if (!await this.SendAsync(AckPacket, client).ConfigureAwait(false)) result.ResultType = ResultType.Error;
+            RemoveTopicClientAsync(client, topics).ConfigureAwait(false).GetAwaiter();
             return result;
         }
         #endregion
@@ -892,7 +918,7 @@ namespace XiaoFeng.Mqtt.Server
                 };
                 result.MqttPacket = DisconnPacket;
                 await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
-                OnMessage?.Invoke(client, new ResultPacket(DisconnPacket, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}"));
+                OnMessageAsync(client, new ResultPacket(DisconnPacket, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}")).ConfigureAwait(false).GetAwaiter();
                 return result;
             }
             result.ResultType = ResultType.Success;
@@ -935,7 +961,7 @@ namespace XiaoFeng.Mqtt.Server
                 };
                 result.MqttPacket = DisconnPacket;
                 await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
-                OnMessage?.Invoke(client, new ResultPacket(DisconnPacket, DisconnPacket.ReasonString));
+                OnMessageAsync(client, new ResultPacket(DisconnPacket, DisconnPacket.ReasonString)).ConfigureAwait(false).GetAwaiter();
                 return result;
             }
 
@@ -950,7 +976,7 @@ namespace XiaoFeng.Mqtt.Server
                 };
                 result.MqttPacket = DisconnPacket;
                 await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
-                OnMessage?.Invoke(client, new ResultPacket(DisconnPacket, DisconnPacket.ReasonString));
+                OnMessageAsync(client, new ResultPacket(DisconnPacket, DisconnPacket.ReasonString)).ConfigureAwait(false).GetAwaiter();
                 return result;
             }
 
@@ -967,7 +993,7 @@ namespace XiaoFeng.Mqtt.Server
                 };
                 result.MqttPacket = DisconnPacket;
                 await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
-                OnMessage?.Invoke(client, new ResultPacket(DisconnPacket, DisconnPacket.ReasonString));
+                OnMessageAsync(client, new ResultPacket(DisconnPacket, DisconnPacket.ReasonString)).ConfigureAwait(false).GetAwaiter();
                 return result;
             }
 
@@ -1055,6 +1081,84 @@ namespace XiaoFeng.Mqtt.Server
         {
             var cdata = client.GetClientData();
             if (cdata == null || cdata.ConnectPacket == null) await Task.CompletedTask;
+            this.MqttServerTopicClients.Each(tc =>
+            {
+                if (tc.Value == null || tc.Value.Count == 0)
+                {
+                    this.MqttServerTopicClients.TryRemove(tc.Key, out var _);
+                    return true;
+                }
+                var IsContains = MqttHelper.IsContainsTopic(tc.Key, packet.Topic, this.ServerOptions.WildcardSubscriptionAvailable);
+                if (IsContains)
+                {
+                    var indexs = new List<int>();
+                    for (var i = 0; i < tc.Value.Count; i++)
+                    {
+                        var c = tc.Value[i];
+                        if (!c.Connected)
+                        {
+                            c.Stop();
+                            indexs.Add(i);
+                            continue;
+                        }
+                        var cData = c.GetClientData();
+                        if (cData == null || cData.ConnectPacket == null || cData.TopicFilters == null || cData.TopicFilters.Count == 0)
+                        {
+                            indexs.Add(i);
+                            continue;
+                        }
+                    }
+                    if (indexs.Count > 0)
+                    {
+                        indexs.Sort();
+                        for (var i = indexs.Count - 1; i >= 0; i--)
+                            tc.Value.RemoveAt(indexs[i]);
+                    }
+                    if (tc.Value.Count == 0)
+                    {
+                        this.MqttServerTopicClients.TryRemove(tc.Key, out var _);
+                        return true;
+                    }
+                    if (MqttHelper.IsSharedTopicFilter(tc.Key))
+                    {
+                        var cs = tc.Value.Where(a => a.EndPoint.ToString() != client.EndPoint.ToString()).ToArray();
+                        var c = cs[RandomHelper.GetRandomInt(0, tc.Value.Count - (cs.Length == tc.Value.Count ? 1 : 2))];
+                        var connpacket = c.GetClientData().ConnectPacket;
+                        var result = new ResultPacket(packet, ResultType.Error, "");
+                        packet.ProtocolVersion = connpacket.ProtocolVersion;
+                        var flags = SendAsync(packet, c).ConfigureAwait(false).GetAwaiter().GetResult();
+                        if (flags)
+                        {
+                            result.ResultType = ResultType.Success;
+                            result.Message = $"Sending PUBLISH to {connpacket.ClientId} ({packet})";
+                        }
+                        else
+                            result.Message = $"Sending PUBLISH to {connpacket.ClientId} failed.";
+                        OnMessageAsync(c, result).ConfigureAwait(false).GetAwaiter();
+                        return true;
+                    }
+
+                    tc.Value.Each(c =>
+                    {
+                        if (c.EndPoint.ToString() == client.EndPoint.ToString()) return;
+                        var connPacket = c.GetClientData().ConnectPacket;
+                        var result = new ResultPacket(packet, ResultType.Error, "");
+                        packet.ProtocolVersion = connPacket.ProtocolVersion;
+                        var flags = SendAsync(packet, c).ConfigureAwait(false).GetAwaiter().GetResult();
+                        if (flags)
+                        {
+                            result.ResultType = ResultType.Success;
+                            result.Message = $"Sending PUBLISH to {connPacket.ClientId} ({packet})";
+                        }
+                        else
+                            result.Message = $"Sending PUBLISH to {connPacket.ClientId} failed.";
+                        OnMessageAsync(c, result).ConfigureAwait(false).GetAwaiter();
+                    });
+                }
+                return true;
+            });
+
+            /*
             var IsSendShare = false;
             this.Server.Clients.Each(async c =>
             {
@@ -1082,9 +1186,9 @@ namespace XiaoFeng.Mqtt.Server
                     }
                     else
                         result.Message = $"Sending PUBLISH to {cdata.ConnectPacket.ClientId} failed.";
-                    OnMessage?.Invoke(c, result);
+                    OnMessageAsync(c, result);
                 }
-            });
+            });*/
         }
         #endregion
 
@@ -1260,6 +1364,104 @@ namespace XiaoFeng.Mqtt.Server
         }
         #endregion
 
+        #region 主题订阅客户端
+        /// <summary>
+        /// 添加订阅客户端
+        /// </summary>
+        /// <param name="client">客户端</param>
+        /// <param name="topics">订阅主题集合</param>
+        private async Task AddTopicClientAsync(ISocketClient client, IList<string> topics)
+        {
+            if (this.MqttServerTopicClients == null)
+                this.MqttServerTopicClients = new ConcurrentDictionary<string, List<ISocketClient>>();
+            await Task.Run(() =>
+            {
+                if (this.MqttServerTopicClients.Count == 0)
+                {
+                    topics.Each(t =>
+                    {
+                        this.MqttServerTopicClients.TryAdd(t, new List<ISocketClient>() { client });
+                    });
+                    return;
+                }
+                topics.Each(t =>
+                {
+                    if (this.MqttServerTopicClients.TryGetValue(t, out var list))
+                    {
+                        if (!list.Exists(a => a.EndPoint.ToString() == client.EndPoint.ToString()))
+                            list.Add(client);
+                    }
+                    else
+                        this.MqttServerTopicClients.TryAdd(t, new List<ISocketClient>() { client });
+                });
+            });
+        }
+        /// <summary>
+        /// 移除MQTT客户端
+        /// </summary>
+        /// <param name="client">MQTT客户端</param>
+        private async Task RemoveTopicClientAsync(ISocketClient client)
+        {
+            if (this.MqttServerTopicClients == null)
+                this.MqttServerTopicClients = new ConcurrentDictionary<string, List<ISocketClient>>();
+            if (this.MqttServerTopicClients.Count == 0) return;
+            await Task.Run(() =>
+            {
+                this.MqttServerTopicClients.Each(tc =>
+                {
+                    var index = tc.Value.FindIndex(a => a.EndPoint.ToString() == client.EndPoint.ToString());
+                    if (index>-1)
+                    {
+                        tc.Value.RemoveAt(index);
+                        if (tc.Value.Count == 0)
+                            this.MqttServerTopicClients.TryRemove(tc.Key, out var _);
+                    }
+                });
+            });
+        }
+        /// <summary>
+        /// 移除主题客户端
+        /// </summary>
+        /// <param name="client">MQTT客户端</param>
+        /// <param name="topics">主题集合</param>
+        private async Task RemoveTopicClientAsync(ISocketClient client, IList<string> topics)
+        {
+            await Task.Run(() =>
+            {
+                topics.Each(t =>
+                {
+                    if (this.MqttServerTopicClients.TryGetValue(t, out var list))
+                    {
+                        var index = list.FindIndex(a => a.EndPoint.ToString() == client.EndPoint.ToString());
+                        if (index > -1)
+                        {
+                            list.RemoveAt(index);
+                            if (list.Count == 0)
+                                this.MqttServerTopicClients.TryRemove(t, out var _);
+                        }
+                    }
+                });
+            });
+        }
+        #endregion
+
+        #region 回调事件
+        /// <summary>
+        /// 回调事件
+        /// </summary>
+        /// <param name="client">MQTT客户端</param>
+        /// <param name="result">结果包</param>
+        /// <returns></returns>
+        public async Task OnMessageAsync(ISocketClient client,ResultPacket result)
+        {
+            if (OnMessage == null) return;
+            await Task.Run(() =>
+            {
+                OnMessage?.Invoke(client, result);
+            });
+        }
+        #endregion
+
         #region 释放
         /// <summary>
         /// 释放
@@ -1277,6 +1479,11 @@ namespace XiaoFeng.Mqtt.Server
             {
                 this.MqttServerTopicMessages.Clear();
                 this.MqttServerTopicMessages = null;
+            }
+            if(this.MqttServerTopicClients != null)
+            {
+                this.MqttServerTopicClients.Clear();
+                this.MqttServerTopicClients = null;
             }
             base.Dispose(disposing);
         }

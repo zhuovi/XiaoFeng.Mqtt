@@ -106,6 +106,9 @@ namespace XiaoFeng.Mqtt.Client
         /// 我的订阅
         /// </summary>
         public ConcurrentDictionary<string, TopicFilter> TopicFilters { get; set; } = new ConcurrentDictionary<string, TopicFilter>();
+        /// <summary>
+        /// PblishPacket数据包
+        /// </summary>
         public PublishPacket PublishPacket { get; set; }
         #endregion
 
@@ -167,7 +170,10 @@ namespace XiaoFeng.Mqtt.Client
             };
             client.OnMessageByte += (o, m, e) =>
             {
-                this.ReceiveMessage(m);
+                Task.Run(() =>
+                {
+                    this.ReceiveMessage(m);
+                });
             };
             client.OnStart += (o, e) =>
             {
