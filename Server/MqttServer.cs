@@ -99,6 +99,10 @@ namespace XiaoFeng.Mqtt.Server
         /// 订阅主题客户端
         /// </summary>
         private ConcurrentDictionary<string, List<ISocketClient>> MqttServerTopicClients { get; set; }
+        /// <summary>
+        /// PblishPacket数据包
+        /// </summary>
+        private PublishPacket PublishPacket { get; set; }
         #endregion
 
         #region 事件
@@ -200,10 +204,7 @@ namespace XiaoFeng.Mqtt.Server
             };
             this.Server.OnMessageByte += (c, m, e) =>
             {
-                Task.Run(() =>
-                {
-                    this.ReceiveMessage(c, m);
-                });
+                this.ReceiveMessage(c, m);
             };
         }
         #endregion
@@ -248,13 +249,59 @@ namespace XiaoFeng.Mqtt.Server
         /// <param name="bytes">字节流</param>
         private async void ReceiveMessage(ISocketClient client, byte[] bytes)
         {
-            var packetType = (PacketType)(bytes[0] >> 4);
             var ClientData = client.GetClientData();
+            var clientId = ClientData.ConnectPacket?.ClientId;
+            if (this.PublishPacket != null)
+            {
+                this.PublishPacket.WriteBuffer(bytes);
+                if (this.PublishPacket.TotalLength > this.PublishPacket.Length)
+                {
+                    return;
+                }
+                else
+                {
+                    this.PublishPacket.UnPacket();
+                    var RemainingBytes = this.PublishPacket.ReadRemainingBytes();
+
+                    DisconnectPacket disPacket;
+                    if (this.PublishPacket.QualityOfServiceLevel == QualityOfServiceLevel.Reserved)
+                    {
+                        disPacket = new DisconnectPacket
+                        {
+                            ReasonCode = ReasonCode.MALFORMED_PACKET,
+                            ReasonString = "PUBLISH QoS is 0x03"
+                        };
+                        OnError?.Invoke(this, disPacket.ReasonString);
+                        //DisconnectAsync(disconnPacket).ConfigureAwait(false).GetAwaiter();
+                        return;
+                    }
+                    if (this.PublishPacket.QualityOfServiceLevel > QualityOfServiceLevel.Reserved)
+                    {
+                        disPacket = new DisconnectPacket
+                        {
+                            ReasonCode = ReasonCode.QOS_NOT_SUPPORTED,
+                            ReasonString = "PUBLISH QoS not supported"
+                        };
+                        OnError?.Invoke(this, disPacket.ReasonString);
+                        DisconnectAsync(client,disPacket).ConfigureAwait(false).GetAwaiter();
+                        return;
+                    }
+                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received {this.PublishPacket.PacketType} from {client.EndPoint} as {clientId} ({this.PublishPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    this.PublishPacket = null;
+                    if (RemainingBytes.Length == 0)
+                        return;
+                    else
+                        bytes = RemainingBytes;
+                }
+            }
+
+            var packetType = (PacketType)(bytes[0] >> 4);
+            
             var ProtocolVersion = MqttProtocolVersion.Unknown;
             if (packetType > 0 && ClientData.ConnectPacket != null)
                 ProtocolVersion = ClientData.ConnectPacket.ProtocolVersion;
             ResultPacket result = null;
-            var clientId = ClientData.ConnectPacket?.ClientId;
+            
             switch (packetType)
             {
                 case PacketType.CONNECT:
@@ -313,6 +360,11 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.PUBLISH:
                     var publishPacket = new PublishPacket(bytes, ProtocolVersion);
+                    if (publishPacket.IsSharding)
+                    {
+                        this.PublishPacket = publishPacket;
+                        return;
+                    }
                     OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received PUBLISH from {client.EndPoint} as {clientId} ({publishPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var publishResult = await PubAckAsync(client, publishPacket).ConfigureAwait(false);
                     if (publishResult.ResultType == ResultType.Error)

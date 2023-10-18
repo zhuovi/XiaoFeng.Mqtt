@@ -205,7 +205,7 @@ namespace XiaoFeng.Mqtt.Internal
         {
             if (this.Length == 0) throw new Exception("当前缓存流没有数据.");
             var newPosition = this.Position + length;
-            //if (this.Length < newPosition) throw new MqttException($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读.");
+            if (this.Length < newPosition) throw new MqttException($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读.");
         }
         #endregion
     }

@@ -109,7 +109,7 @@ namespace XiaoFeng.Mqtt.Client
         /// <summary>
         /// PblishPacket数据包
         /// </summary>
-        public PublishPacket PublishPacket { get; set; }
+        private PublishPacket PublishPacket { get; set; }
         #endregion
 
         #region 事件
@@ -170,10 +170,7 @@ namespace XiaoFeng.Mqtt.Client
             };
             client.OnMessageByte += (o, m, e) =>
             {
-                Task.Run(() =>
-                {
-                    this.ReceiveMessage(m);
-                });
+                this.ReceiveMessage(m);
             };
             client.OnStart += (o, e) =>
             {
