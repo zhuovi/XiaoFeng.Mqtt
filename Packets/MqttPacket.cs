@@ -170,9 +170,11 @@ namespace XiaoFeng.Mqtt.Packets
         public void WriteBuffer(byte[] buffer)
         {
             var position = this.Reader.Position;
-            this.Reader.Seek(0, SeekOrigin.Begin);
-            this.Reader.SetBuffer(this.Reader.ReadBytes().Concat(buffer).ToArray());
+            this.Reader.WriteBuffer(buffer);
             this.Reader.Position = position;
+            //this.Reader.Seek(0, SeekOrigin.Begin);
+            //this.Reader.SetBuffer(this.Reader.ReadBytes().Concat(buffer).ToArray());
+            //this.Reader.Position = position;
         }
         /// <summary>
         /// 写流

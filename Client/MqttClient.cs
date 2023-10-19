@@ -273,46 +273,49 @@ namespace XiaoFeng.Mqtt.Client
         {
             if (this.PublishPacket != null)
             {
-                this.PublishPacket.WriteBuffer(bytes);
-                if (this.PublishPacket.TotalLength > this.PublishPacket.Length)
+                lock (this.PublishPacket)
                 {
-                    return;
-                }
-                else
-                {
-                    this.PublishPacket.UnPacket();
-                    var RemainingBytes = this.PublishPacket.ReadRemainingBytes();
-
-                    OnMessageAsync(new ResultPacket(ResultType.Success, $"Received {this.PublishPacket.PacketType} from server ({this.PublishPacket}).")).ConfigureAwait(false).GetAwaiter();
-                    DisconnectPacket disPacket;
-                    if (this.PublishPacket.QualityOfServiceLevel == QualityOfServiceLevel.Reserved)
+                    this.PublishPacket.WriteBuffer(bytes);
+                    if (this.PublishPacket.TotalLength > this.PublishPacket.Length)
                     {
-                        disPacket = new DisconnectPacket
-                        {
-                            ReasonCode = ReasonCode.MALFORMED_PACKET,
-                            ReasonString = "PUBLISH QoS is 0x03"
-                        };
-                        OnError?.Invoke(this, disPacket.ReasonString);
-                        //DisconnectAsync(disconnPacket).ConfigureAwait(false).GetAwaiter();
                         return;
                     }
-                    if (this.PublishPacket.QualityOfServiceLevel > QualityOfServiceLevel.Reserved)
-                    {
-                        disPacket = new DisconnectPacket
-                        {
-                            ReasonCode = ReasonCode.QOS_NOT_SUPPORTED,
-                            ReasonString = "PUBLISH QoS not supported"
-                        };
-                        OnError?.Invoke(this, disPacket.ReasonString);
-                        DisconnectAsync(disPacket).ConfigureAwait(false).GetAwaiter();
-                        return;
-                    }
-                    OnPublishMessage?.Invoke(this.PublishPacket);
-                    this.PublishPacket = null;
-                    if (RemainingBytes.Length == 0)
-                        return;
                     else
-                        bytes = RemainingBytes;
+                    {
+                        this.PublishPacket.UnPacket();
+                        var RemainingBytes = this.PublishPacket.ReadRemainingBytes();
+
+                        OnMessageAsync(new ResultPacket(ResultType.Success, $"Received {this.PublishPacket.PacketType} from server ({this.PublishPacket}).")).ConfigureAwait(false).GetAwaiter();
+                        DisconnectPacket disPacket;
+                        if (this.PublishPacket.QualityOfServiceLevel == QualityOfServiceLevel.Reserved)
+                        {
+                            disPacket = new DisconnectPacket
+                            {
+                                ReasonCode = ReasonCode.MALFORMED_PACKET,
+                                ReasonString = "PUBLISH QoS is 0x03"
+                            };
+                            OnError?.Invoke(this, disPacket.ReasonString);
+                            //DisconnectAsync(disconnPacket).ConfigureAwait(false).GetAwaiter();
+                            return;
+                        }
+                        if (this.PublishPacket.QualityOfServiceLevel > QualityOfServiceLevel.Reserved)
+                        {
+                            disPacket = new DisconnectPacket
+                            {
+                                ReasonCode = ReasonCode.QOS_NOT_SUPPORTED,
+                                ReasonString = "PUBLISH QoS not supported"
+                            };
+                            OnError?.Invoke(this, disPacket.ReasonString);
+                            DisconnectAsync(disPacket).ConfigureAwait(false).GetAwaiter();
+                            return;
+                        }
+                        OnPublishMessage?.Invoke(this.PublishPacket);
+                        this.PublishPacket = null;
+                        if (RemainingBytes.Length == 0)
+                            return;
+                        else
+                            bytes = RemainingBytes;
+                    }
                 }
             }
             var packetType = (PacketType)(bytes[0] >> 4);

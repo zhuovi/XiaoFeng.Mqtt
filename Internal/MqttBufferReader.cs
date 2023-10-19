@@ -31,7 +31,9 @@ namespace XiaoFeng.Mqtt.Internal
         /// <param name="buffer">数据</param>
         public MqttBufferReader(byte[] buffer)
         {
-            this.Data = new MemoryStream(buffer);
+            this.Data = new MemoryStream();
+            this.Data.Write(buffer, 0, buffer.Length);
+            this.Data.Seek(0, SeekOrigin.Begin);
         }
         #endregion
 
@@ -113,7 +115,21 @@ namespace XiaoFeng.Mqtt.Internal
         /// <param name="buffer">缓存数据</param>
         public void SetBuffer(byte[] buffer)
         {
-            this.Data = new MemoryStream(buffer);
+            //this.Data = new MemoryStream(buffer, true);
+            this.Data = new MemoryStream();
+            this.Data.Write(buffer, 0, buffer.Length);
+            this.Data.Seek(0, SeekOrigin.Begin);
+        }
+        /// <summary>
+        /// 写缓存数据
+        /// </summary>
+        /// <param name="buffer">缓存数据</param>
+        public void WriteBuffer(byte[] buffer)
+        {
+            var position = this.Data.Position;
+            this.Data.Seek(0, SeekOrigin.End);
+            this.Data.Write(buffer, 0, buffer.Length);
+            this.Data.Position = position;
         }
         /// <summary>
         /// 读取字符串

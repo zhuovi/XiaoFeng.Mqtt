@@ -35,7 +35,7 @@ namespace XiaoFeng.Mqtt.Internal
         /// <param name="buffer">数据</param>
         public MqttBufferWriter(MqttBufferWriter buffer)
         {
-            this.Data = new MemoryStream(buffer.ToArray());
+            this.Data = new MemoryStream(buffer.ToArray(), true);
         }
         #endregion
 
