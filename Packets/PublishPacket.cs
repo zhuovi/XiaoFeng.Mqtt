@@ -193,6 +193,7 @@ namespace XiaoFeng.Mqtt.Packets
         public override bool ReadBuffer(MqttBufferReader reader)
         {
             this.Topic = reader.ReadString();
+            if (this.Topic.IsNullOrEmpty() || !MqttHelper.IsValidTopicName(this.Topic)) return false;
             if (this.QualityOfServiceLevel > QualityOfServiceLevel.AtMostOnce)
             {
                 this.PacketIdentifier = reader.ReadTwoByteInteger();

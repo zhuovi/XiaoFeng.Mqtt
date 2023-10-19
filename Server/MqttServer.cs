@@ -289,7 +289,7 @@ namespace XiaoFeng.Mqtt.Server
                             ReasonString = "PUBLISH QoS not supported"
                         };
                         OnError?.Invoke(this, disPacket.ReasonString);
-                        DisconnectAsync(client,disPacket).ConfigureAwait(false).GetAwaiter();
+                        DisconnectAsync(client, disPacket).ConfigureAwait(false).GetAwaiter();
                         return;
                     }
                     OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received {this.PublishPacket.PacketType} from {client.EndPoint} as {clientId} ({this.PublishPacket}).")).ConfigureAwait(false).GetAwaiter();
@@ -302,17 +302,17 @@ namespace XiaoFeng.Mqtt.Server
             }
 
             var packetType = (PacketType)(bytes[0] >> 4);
-            
+
             var ProtocolVersion = MqttProtocolVersion.Unknown;
             if (packetType > 0 && ClientData.ConnectPacket != null)
                 ProtocolVersion = ClientData.ConnectPacket.ProtocolVersion;
             ResultPacket result = null;
-            
+
             switch (packetType)
             {
                 case PacketType.CONNECT:
                     var connPacket = new ConnectPacket(bytes, ProtocolVersion);
-                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"New client connected from {client.EndPoint} as {connPacket.ClientId} ({connPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    OnMessageAsync(client, new ResultPacket(connPacket, ResultType.Success, $"New client connected from {client.EndPoint} as {connPacket.ClientId} ({connPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var connActResult = await this.ConnActAsync(client, connPacket).ConfigureAwait(false);
                     if (connActResult.ResultType == ResultType.Error)
                     {
@@ -323,14 +323,14 @@ namespace XiaoFeng.Mqtt.Server
                     else
                     {
                         if (connPacket.WillMessage == null || connPacket.WillMessage.Length == 0)
-                            OnMessageAsync(client, new ResultPacket(ResultType.Success, "No WillMessage specified.")).ConfigureAwait(false).GetAwaiter();
+                            OnMessageAsync(client, new ResultPacket(connPacket, ResultType.Success, "No WillMessage specified.")).ConfigureAwait(false).GetAwaiter();
                         result = new ResultPacket(connActResult.MqttPacket, ResultType.Success, $"Sending CONNACK to {connPacket.ClientId} ({connActResult.MqttPacket}).");
                         ClientData.ConnectPacket = connPacket;
                     }
                     break;
                 case PacketType.AUTH:
                     var authPacket = new AuthPacket(bytes, ProtocolVersion);
-                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received AUTH from {client.EndPoint} as {clientId} ({authPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    OnMessageAsync(client, new ResultPacket(authPacket, ResultType.Success, $"Received AUTH from {client.EndPoint} as {clientId} ({authPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var processAuthResult = await ProcessAuthPacketAsync(client, authPacket).ConfigureAwait(false);
                     if (processAuthResult.ResultType == ResultType.Error)
                     {
@@ -339,7 +339,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.DISCONNECT:
                     var disconnPacket = new DisconnectPacket(bytes, ProtocolVersion);
-                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received DISCONNECT from {client.EndPoint} as {clientId} ({disconnPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    OnMessageAsync(client, new ResultPacket(disconnPacket, ResultType.Success, $"Received DISCONNECT from {client.EndPoint} as {clientId} ({disconnPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var processDisconnResult = await ProcessDisconnectAsync(client, disconnPacket).ConfigureAwait(false);
                     if (processDisconnResult.ResultType == ResultType.Error)
                     {
@@ -348,7 +348,7 @@ namespace XiaoFeng.Mqtt.Server
                     return;
                 case PacketType.PINGREQ:
                     var pingReqPacket = new PingReqPacket(bytes, ProtocolVersion);
-                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received PINGREQ from {client.EndPoint} as {clientId} ({pingReqPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    OnMessageAsync(client, new ResultPacket(pingReqPacket, ResultType.Success, $"Received PINGREQ from {client.EndPoint} as {clientId} ({pingReqPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var pingRespResult = await PingRespAsync(client, pingReqPacket).ConfigureAwait(false);
                     if (pingRespResult.ResultType == ResultType.Error)
                     {
@@ -367,7 +367,7 @@ namespace XiaoFeng.Mqtt.Server
                         this.PublishPacket = publishPacket;
                         return;
                     }
-                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received PUBLISH from {client.EndPoint} as {clientId} ({publishPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    OnMessageAsync(client, new ResultPacket(publishPacket, ResultType.Success, $"Received PUBLISH from {client.EndPoint} as {clientId} ({publishPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var publishResult = await PubAckAsync(client, publishPacket).ConfigureAwait(false);
                     if (publishResult.ResultType == ResultType.Error)
                     {
@@ -381,7 +381,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.PUBREL:
                     var RelPacket = new PubRelPacket(bytes, ProtocolVersion);
-                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received {RelPacket.PacketType} from {client.EndPoint} as {clientId} ({RelPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    OnMessageAsync(client, new ResultPacket(RelPacket, ResultType.Success, $"Received {RelPacket.PacketType} from {client.EndPoint} as {clientId} ({RelPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var pubcompResult = await PubCompAsync(client, RelPacket).ConfigureAwait(false);
                     if (pubcompResult.ResultType == ResultType.Error)
                     {
@@ -395,7 +395,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.SUBSCRIBE:
                     var subPacket = new SubscribePacket(bytes, ProtocolVersion);
-                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received {subPacket.PacketType} from {client.EndPoint} as {clientId} ({subPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    OnMessageAsync(client, new ResultPacket(subPacket, ResultType.Success, $"Received {subPacket.PacketType} from {client.EndPoint} as {clientId} ({subPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var subActResult = await this.SubActAsync(client, subPacket).ConfigureAwait(false);
                     if (subActResult.ResultType == ResultType.Error)
                     {
@@ -409,7 +409,7 @@ namespace XiaoFeng.Mqtt.Server
                     break;
                 case PacketType.UNSUBSCRIBE:
                     var unsubPacket = new UnsubscribePacket(bytes, ProtocolVersion);
-                    OnMessageAsync(client, new ResultPacket(ResultType.Success, $"Received  {unsubPacket.PacketType}  from {client.EndPoint} as {clientId} ({unsubPacket}).")).ConfigureAwait(false).GetAwaiter();
+                    OnMessageAsync(client, new ResultPacket(unsubPacket, ResultType.Success, $"Received  {unsubPacket.PacketType}  from {client.EndPoint} as {clientId} ({unsubPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var unsubActResult = await this.UnsubAckAsync(client, unsubPacket).ConfigureAwait(false);
                     if (unsubActResult.ResultType == ResultType.Error)
                     {
@@ -1512,7 +1512,10 @@ namespace XiaoFeng.Mqtt.Server
             if (OnMessage == null) return;
             await Task.Run(() =>
             {
-                OnMessage?.Invoke(client, result);
+                if (result.MqttPacket != null && result.MqttPacket.PacketStatus == PacketStatus.Error)
+                    OnClientError?.Invoke(client, client.EndPoint, $"Unpacketing failed: Received {result.MqttPacket.PacketType} from {client.EndPoint} as {client.GetClientData()?.ConnectPacket.ClientId} ({result.MqttPacket}).");
+                else
+                    OnMessage?.Invoke(client, result);
             });
         }
         #endregion

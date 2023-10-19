@@ -97,7 +97,7 @@ namespace XiaoFeng.Mqtt.Internal
             if (length <= 0) length = this.Length - this.Position;
             if (length > this.Length - this.Position) length = this.Length - this.Position;
             if(length==0) return Array.Empty<byte>();
-            this.ValidateBufferLength((int)length);
+            if (!this.ValidateBufferLength((int)length)) return Array.Empty<byte>();
             var bytes = new byte[length];
             this.Data.Read(bytes, 0, (int)length);
             return bytes;
@@ -134,7 +134,7 @@ namespace XiaoFeng.Mqtt.Internal
         {
             var length = this.ReadTwoByteInteger();
             if (length == 0) return Array.Empty<byte>();
-            ValidateBufferLength(length);
+            if (!ValidateBufferLength(length)) return Array.Empty<byte>();
             return this.ReadBytes(length);
         }
         /// <summary>
@@ -143,7 +143,7 @@ namespace XiaoFeng.Mqtt.Internal
         /// <returns></returns>
         public ushort ReadTwoByteInteger()
         {
-            ValidateBufferLength(2);
+            if (!ValidateBufferLength(2)) return 0;
             var msb = this.ReadByte();
             var lsb = this.ReadByte();
             return (ushort)(msb << 8 | lsb);
@@ -154,7 +154,7 @@ namespace XiaoFeng.Mqtt.Internal
         /// <returns></returns>
         public uint ReadFourByteInteger()
         {
-            ValidateBufferLength(4);
+            if (!ValidateBufferLength(4)) return 0;
             var byte0 = this.ReadByte();
             var byte1 = this.ReadByte();
             var byte2 = this.ReadByte();
@@ -201,11 +201,18 @@ namespace XiaoFeng.Mqtt.Internal
         /// </summary>
         /// <param name="length">长度</param>
         /// <exception cref="Exception">异常</exception>
-        void ValidateBufferLength(int length)
+        bool ValidateBufferLength(int length)
         {
             if (this.Length == 0) throw new Exception("当前缓存流没有数据.");
             var newPosition = this.Position + length;
-            if (this.Length < newPosition) throw new MqttException($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读.");
+
+            if (this.Length < newPosition)
+            {
+                LogHelper.Error(new MqttException($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读."));
+                LogHelper.Debug(this.Data.ToArray().Join(" "));
+                return false;
+            }
+            return true;
         }
         #endregion
     }

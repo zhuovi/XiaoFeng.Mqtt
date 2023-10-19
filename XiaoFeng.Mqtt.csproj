@@ -24,7 +24,7 @@
 		<PackageProjectUrl>https://www.eelf.cn</PackageProjectUrl>
 		<PackageIconUrl>http://nuget.fayelf.com/x.png</PackageIconUrl>
 		<PackageTags>XiaoFeng;FAYELF;MQTT;</PackageTags>
-		<PackageReleaseNotes>优化服务端分发消息时的效率;</PackageReleaseNotes>
+		<PackageReleaseNotes>优化服务端分发消息时的效率;优化解包失败时放弃当前包;</PackageReleaseNotes>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<DelaySign>False</DelaySign>

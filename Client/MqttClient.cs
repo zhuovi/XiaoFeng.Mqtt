@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using XiaoFeng.Mqtt.Internal;
 using XiaoFeng.Mqtt.Packets;
+using XiaoFeng.Mqtt.Server;
 using XiaoFeng.Net;
 using XiaoFeng.Threading;
 /****************************************************************
@@ -282,7 +283,7 @@ namespace XiaoFeng.Mqtt.Client
                     this.PublishPacket.UnPacket();
                     var RemainingBytes = this.PublishPacket.ReadRemainingBytes();
 
-                    OnMessage?.Invoke(new ResultPacket(ResultType.Success, $"Received {this.PublishPacket.PacketType} from server ({this.PublishPacket})."));
+                    OnMessageAsync(new ResultPacket(ResultType.Success, $"Received {this.PublishPacket.PacketType} from server ({this.PublishPacket}).")).ConfigureAwait(false).GetAwaiter();
                     DisconnectPacket disPacket;
                     if (this.PublishPacket.QualityOfServiceLevel == QualityOfServiceLevel.Reserved)
                     {
@@ -326,7 +327,12 @@ namespace XiaoFeng.Mqtt.Client
                         this.PublishPacket = publishPacket;
                         return;
                     }
-                    OnMessage?.Invoke(result = new ResultPacket(ResultType.Success, $"Received {publishPacket.PacketType} from server ({publishPacket})."));
+                    if (publishPacket.PacketStatus == PacketStatus.Error)
+                    {
+                        OnError?.Invoke(this, $"Unpacketing failed: Received {publishPacket.PacketType} from server ({publishPacket}).");
+                        return;
+                    }
+                    OnMessageAsync(result = new ResultPacket(ResultType.Success, $"Received {publishPacket.PacketType} from server ({publishPacket}).")).ConfigureAwait(false).GetAwaiter();
                     if (publishPacket.QualityOfServiceLevel == QualityOfServiceLevel.Reserved)
                     {
                         disconnPacket = new DisconnectPacket
@@ -353,7 +359,7 @@ namespace XiaoFeng.Mqtt.Client
                     return;
                 case PacketType.DISCONNECT:
                     disconnPacket = new DisconnectPacket(bytes, this.ClientOptions.ProtocolVersion);
-                    result = new ResultPacket(ResultType.Success, $"Received {disconnPacket.PacketType} from server ({disconnPacket}).");
+                    result = new ResultPacket(disconnPacket, ResultType.Success, $"Received {disconnPacket.PacketType} from server ({disconnPacket}).");
                     if (disconnPacket.ServerReference.IsNotNullOrEmpty())
                     {
                         ServerMovedAsync(disconnPacket.ServerReference).ConfigureAwait(false).GetAwaiter();
@@ -361,15 +367,15 @@ namespace XiaoFeng.Mqtt.Client
                     break;
                 case PacketType.PINGRESP:
                     var pingRespPacket = new PingRespPacket(bytes, this.ClientOptions.ProtocolVersion);
-                    result = new ResultPacket(ResultType.Success, $"Received {pingRespPacket.PacketType} from server ({pingRespPacket}).");
+                    result = new ResultPacket(pingRespPacket, ResultType.Success, $"Received {pingRespPacket.PacketType} from server ({pingRespPacket}).");
                     break;
                 case PacketType.PUBACK:
                     var pubAckPacket = new PubAckPacket(bytes, this.ClientOptions.ProtocolVersion);
-                    result = new ResultPacket(ResultType.Success, $"Received {pubAckPacket.PacketType} from server ({pubAckPacket}).");
+                    result = new ResultPacket(pubAckPacket, ResultType.Success, $"Received {pubAckPacket.PacketType} from server ({pubAckPacket}).");
                     break;
                 case PacketType.PUBREC:
                     var recPacket = new PubRecPacket(bytes, this.ClientOptions.ProtocolVersion);
-                    OnMessage?.Invoke(new ResultPacket(ResultType.Success, $"Received {recPacket.PacketType} from server ({recPacket})."));
+                    OnMessageAsync(new ResultPacket(recPacket, ResultType.Success, $"Received {recPacket.PacketType} from server ({recPacket}).")).ConfigureAwait(false).GetAwaiter();
                     if (recPacket.FixedFlags != 0x02)
                     {
                         disconnPacket = new DisconnectPacket
@@ -393,21 +399,23 @@ namespace XiaoFeng.Mqtt.Client
                     }
                 case PacketType.PUBCOMP:
                     var pubCompPacket = new PubCompPacket(bytes, this.ClientOptions.ProtocolVersion);
-                    result = new ResultPacket(ResultType.Success, $"Received {pubCompPacket.PacketType} from server ({pubCompPacket}).");
+                    result = new ResultPacket(pubCompPacket, ResultType.Success, $"Received {pubCompPacket.PacketType} from server ({pubCompPacket}).");
                     break;
                 case PacketType.SUBACK:
                     var subAckPacket = new SubAckPacket(bytes, this.ClientOptions.ProtocolVersion);
-                    result = new ResultPacket(ResultType.Success, $"Received {subAckPacket.PacketType} from server ({subAckPacket}).");
+                    result = new ResultPacket(subAckPacket, ResultType.Success, $"Received {subAckPacket.PacketType} from server ({subAckPacket}).");
                     break;
                 case PacketType.UNSUBACK:
                     var unsubAckPacket = new UnsubAckPacket(bytes, this.ClientOptions.ProtocolVersion);
-                    result = new ResultPacket(ResultType.Success, $"Received {unsubAckPacket.PacketType} from server ({unsubAckPacket}).");
+                    result = new ResultPacket(unsubAckPacket, ResultType.Success, $"Received {unsubAckPacket.PacketType} from server ({unsubAckPacket}).");
                     break;
                 default:
                     break;
             }
             if (result != null)
-                OnMessage?.Invoke(result);
+            {
+                OnMessageAsync(result).ConfigureAwait(false).GetAwaiter();
+            }
         }
         #endregion
 
@@ -424,7 +432,7 @@ namespace XiaoFeng.Mqtt.Client
                 if (!init) return null;
             }
             var connPacket = this.ClientOptions as ConnectPacket;
-            OnMessage?.Invoke(new ResultPacket(connPacket, ResultType.Success, $"Sending {connPacket.PacketType} to server ({connPacket})."));
+            OnMessageAsync(new ResultPacket(connPacket, ResultType.Success, $"Sending {connPacket.PacketType} to server ({connPacket}).")).ConfigureAwait(false).GetAwaiter();
             await this.Client.SendAsync(connPacket.ToArray(), MessageType.Binary).ConfigureAwait(false);
             var bytes = await this.Client.ReceviceMessageAsync().ConfigureAwait(false);
             if(this.Client is IWebSocketClient)
@@ -433,7 +441,7 @@ namespace XiaoFeng.Mqtt.Client
                 bytes = packet.UnPacket(bytes);
             }
             var connAct = new ConnectActPacket(bytes);
-            OnMessage?.Invoke(new ResultPacket(connAct,resultType: ResultType.Success, $"Received {connAct.PacketType} from server ({connAct})."));
+            OnMessageAsync(new ResultPacket(connAct,resultType: ResultType.Success, $"Received {connAct.PacketType} from server ({connAct}).")).ConfigureAwait(false).GetAwaiter();
             if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED)
             {
                 OnError?.Invoke(this, $"Connect failed: [{connAct.ReasonCode}] [{connAct.ReasonString}]");
@@ -802,7 +810,7 @@ namespace XiaoFeng.Mqtt.Client
 
             if (!this.Connected) await this.ConnectAsync().ConfigureAwait(false);
 
-            OnMessage?.Invoke(new ResultPacket(packet, ResultType.Success, $"Sending {packet.PacketType} to server ({packet})."));
+            OnMessageAsync(new ResultPacket(packet, ResultType.Success, $"Sending {packet.PacketType} to server ({packet}).")).ConfigureAwait(false).GetAwaiter();
 
             MqttHelper.GetPacketSharding(packet.ToArray(), this.ClientOptions.MaximumPacketSize).Each(async bs =>
             {
@@ -885,7 +893,7 @@ namespace XiaoFeng.Mqtt.Client
             var line = reader.ReadLine();
             while (line.IsNotNullOrEmpty())
             {
-                OnMessage?.Invoke(new ResultPacket(ResultType.Success, $"Server reference: {line}"));
+                OnMessageAsync(new ResultPacket(ResultType.Success, $"Server reference: {line}")).ConfigureAwait(false).GetAwaiter();
                 var hostport = line.Trim().Split(':');
                 if (line.Length > 1)
                 {
@@ -901,6 +909,25 @@ namespace XiaoFeng.Mqtt.Client
                 await this.ConnectAsync().ConfigureAwait(false);
                 break;
             }
+        }
+        #endregion
+
+        #region 回调事件
+        /// <summary>
+        /// 回调事件
+        /// </summary>
+        /// <param name="result">结果</param>
+        /// <returns></returns>
+        public async Task OnMessageAsync(ResultPacket result)
+        {
+            if (OnMessage == null) return;
+            await Task.Run(() =>
+            {
+                if (result.MqttPacket != null && result.MqttPacket.PacketStatus == PacketStatus.Error)
+                    OnError?.Invoke(this, $"Unpacketing failed: Received {result.MqttPacket.PacketType} from server ({result.MqttPacket}).");
+                else
+                    OnMessage?.Invoke(result);
+            });
         }
         #endregion
 

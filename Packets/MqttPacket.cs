@@ -110,6 +110,10 @@ namespace XiaoFeng.Mqtt.Packets
         /// 包长
         /// </summary>
         public int PacketSize => this._PacketSize;
+        /// <summary>
+        /// 解包状态
+        /// </summary>
+        public PacketStatus PacketStatus { get; set; } = PacketStatus.Success;
         #endregion
 
         #region 方法
@@ -154,7 +158,10 @@ namespace XiaoFeng.Mqtt.Packets
                 return;
             }
             var reader = new MqttBufferReader(this.Reader.ReadBytes(length));
-            if (this.ReadBuffer(reader)) return;
+            if (!this.ReadBuffer(reader))
+            {
+                this.PacketStatus = PacketStatus.Error;
+            }
         }
         /// <summary>
         /// 写buffer
