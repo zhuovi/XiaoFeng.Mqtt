@@ -7,6 +7,7 @@ using XiaoFeng.Net;
 using XiaoFeng.Mqtt.Packets;
 using XiaoFeng.Mqtt.Internal;
 using System.Collections.Concurrent;
+using XiaoFeng.Threading;
 
 /****************************************************************
 *  Copyright © (2023) www.eelf.cn All Rights Reserved.          *
@@ -103,6 +104,10 @@ namespace XiaoFeng.Mqtt.Server
         /// PblishPacket数据包
         /// </summary>
         private PublishPacket PublishPacket { get; set; }
+        /// <summary>
+        /// 清理客户端作业
+        /// </summary>
+        private IJob CleanWorker;
         #endregion
 
         #region 事件
@@ -170,6 +175,7 @@ namespace XiaoFeng.Mqtt.Server
             this.Server.OnStart += (o, e) =>
             {
                 this.OnStarted?.Invoke(this);
+                CleanKeepAliveClientAsync().ConfigureAwait(false).GetAwaiter();
             };
             this.Server.OnStop += (o, e) =>
             {
@@ -338,10 +344,6 @@ namespace XiaoFeng.Mqtt.Server
                     if (processDisconnResult.ResultType == ResultType.Error)
                     {
                         OnError?.Invoke(this, processDisconnResult.Message);
-                    }
-                    else
-                    {
-                        client.Stop();
                     }
                     return;
                 case PacketType.PINGREQ:
@@ -917,7 +919,6 @@ namespace XiaoFeng.Mqtt.Server
         {
             var result = new ResultPacket(packet, ResultType.Success, "");
             if (!await this.SendAsync(packet, client).ConfigureAwait(false)) result.ResultType = ResultType.Error;
-            client.Stop();
             return result;
         }
         #endregion
@@ -1316,6 +1317,8 @@ namespace XiaoFeng.Mqtt.Server
                 {
                     await client.SendAsync(bs, MessageType.Binary).ConfigureAwait(false);
                 });
+                if (packet is DisconnectPacket)
+                    client.Stop();
                 return true;
             }
             if (this.Server.Clients.Count == 0) return false;
@@ -1514,6 +1517,39 @@ namespace XiaoFeng.Mqtt.Server
         }
         #endregion
 
+        #region 定时清理指定时间内无响应的客户端
+        /// <summary>
+        /// 定时清理指定时间内无响应的客户端
+        /// </summary>
+        /// <returns></returns>
+        private async Task CleanKeepAliveClientAsync()
+        {
+            if (this.CleanWorker == null)
+            {
+                if (this.ServerOptions.ServerKeepAlive == 0)
+                    this.ServerOptions.ServerKeepAlive = 60;
+                this.CleanWorker = new Job().SetName("CleanKeepAliveClient").Interval(this.ServerOptions.ServerKeepAlive * 1000).SetCompleteCallBack(job =>
+                {
+                    this.Server.Clients.Each(c =>
+                    {
+                        if (!c.Connected) return;
+                        if (c.LastMessageTime.AddSeconds(this.ServerOptions.ServerKeepAlive) < DateTime.Now)
+                        {
+                            var DisconnPacket = new DisconnectPacket()
+                            {
+                                ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD,
+                                ReasonString = "Client timeout: exceeded the activation duration"
+                            };
+                            SendAsync(DisconnPacket, c).ConfigureAwait(false).GetAwaiter();
+                        }
+                    });
+                });
+                this.CleanWorker.Start();
+            }
+            await Task.CompletedTask;
+        }
+        #endregion
+
         #region 释放
         /// <summary>
         /// 释放
@@ -1536,6 +1572,11 @@ namespace XiaoFeng.Mqtt.Server
             {
                 this.MqttServerTopicClients.Clear();
                 this.MqttServerTopicClients = null;
+            }
+            if (this.CleanWorker != null)
+            {
+                this.CleanWorker.Stop();
+                this.CleanWorker = null;
             }
             base.Dispose(disposing);
         }
