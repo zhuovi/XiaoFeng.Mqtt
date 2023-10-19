@@ -8,6 +8,7 @@ using XiaoFeng.Mqtt.Packets;
 using XiaoFeng.Mqtt.Internal;
 using System.Collections.Concurrent;
 using XiaoFeng.Threading;
+using XiaoFeng.FTP;
 
 /****************************************************************
 *  Copyright © (2023) www.eelf.cn All Rights Reserved.          *
@@ -325,7 +326,6 @@ namespace XiaoFeng.Mqtt.Server
                         if (connPacket.WillMessage == null || connPacket.WillMessage.Length == 0)
                             OnMessageAsync(client, new ResultPacket(connPacket, ResultType.Success, "No WillMessage specified.")).ConfigureAwait(false).GetAwaiter();
                         result = new ResultPacket(connActResult.MqttPacket, ResultType.Success, $"Sending CONNACK to {connPacket.ClientId} ({connActResult.MqttPacket}).");
-                        ClientData.ConnectPacket = connPacket;
                     }
                     break;
                 case PacketType.AUTH:
@@ -643,7 +643,14 @@ namespace XiaoFeng.Mqtt.Server
 
             if (packet.SessionExpiryInterval > 0 && this.ServerOptions.SessionExpiryInterval <= 0)
                 this.ServerOptions.SessionExpiryInterval = packet.SessionExpiryInterval;
-
+            //设置客户端连接请求包
+            var cdata = client.GetClientData();
+            if (cdata == null)
+            {
+                client.InitClientData();
+                cdata = client.GetClientData();
+            }
+            cdata.ConnectPacket = packet;
             AckPacket.SessionExpiryInterval = this.ServerOptions.SessionExpiryInterval;
             AckPacket.SharedSubscriptionAvailable = this.ServerOptions.SharedSubscriptionAvailable;
             AckPacket.SubscriptionIdentifiersAvailable = this.ServerOptions.SubscriptionIdentifiersAvailable;
@@ -1074,7 +1081,7 @@ namespace XiaoFeng.Mqtt.Server
                 return result;
             }
             if (packet.QualityOfServiceLevel == QualityOfServiceLevel.AtLeastOnce)
-                AckPacket = (PubAckPacket)AckPacket;
+                AckPacket.PacketType = PacketType.PUBACK;// = (PubAckPacket)AckPacket;
             else if (packet.QualityOfServiceLevel == QualityOfServiceLevel.ExactlyOnce)
                 AckPacket = (PubRecPacket)AckPacket;
 
@@ -1527,6 +1534,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <returns></returns>
         private async Task CleanKeepAliveClientAsync()
         {
+            return;
             if (this.CleanWorker == null)
             {
                 if (this.ServerOptions.ServerKeepAlive == 0)
