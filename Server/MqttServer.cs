@@ -1083,7 +1083,7 @@ namespace XiaoFeng.Mqtt.Server
             if (packet.QualityOfServiceLevel == QualityOfServiceLevel.AtLeastOnce)
                 AckPacket.PacketType = PacketType.PUBACK;// = (PubAckPacket)AckPacket;
             else if (packet.QualityOfServiceLevel == QualityOfServiceLevel.ExactlyOnce)
-                AckPacket = (PubRecPacket)AckPacket;
+                AckPacket.PacketType = PacketType.PUBREC;// = (PubRecPacket)AckPacket;
 
             AckPacket.ReasonCode = ReasonCode.SUCCESS;
             AckPacket.PacketIdentifier = packet.PacketIdentifier;
