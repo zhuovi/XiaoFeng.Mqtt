@@ -225,7 +225,7 @@ namespace XiaoFeng.Mqtt.Internal
             if (this.Length < newPosition)
             {
                 LogHelper.Error(new MqttException($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读."));
-                LogHelper.Debug(this.Data.ToArray().Join(" "));
+                //LogHelper.Debug(this.Data.ToArray().Join(" "));
                 return false;
             }
             return true;
