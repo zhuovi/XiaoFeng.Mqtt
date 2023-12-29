@@ -29,44 +29,52 @@ XiaoFeng.Mqtt generator with [XiaoFeng.Mqtt](https://github.com/zhuovi/XiaoFeng.
 .NET CLI
 
 ```
-$ dotnet add package XiaoFeng.Mqtt --version 1.0.1
+$ dotnet add package XiaoFeng.Mqtt --version 1.0.2
 ```
 
 Package Manager
 
 ```
-PM> Install-Package XiaoFeng.Mqtt --Version 1.0.1
+PM> Install-Package XiaoFeng.Mqtt --Version 1.0.2
 ```
 
 PackageReference
 
 ```
-<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.1" />
+<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.2" />
 ```
 
 Paket CLI
 
 ```
-> paket add XiaoFeng.Mqtt --version 1.0.1
+> paket add XiaoFeng.Mqtt --version 1.0.2
 ```
 
 Script & Interactive
 
 ```
-> #r "nuget: XiaoFeng.Mqtt, 1.0.1"
+> #r "nuget: XiaoFeng.Mqtt, 1.0.2"
 ```
 
 Cake
 
 ```
 // Install XiaoFeng.Mqtt as a Cake Addin
-#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.1
+#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.2
 
 // Install XiaoFeng.Mqtt as a Cake Tool
-#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.1
+#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.2
 ```
 
 # 版本更新
+
+## 2023-12-29   v 1.0.2
+
+1.优化服务端分发消息时的效率;
+
+2.优化解包失败时放弃当前包;
+
+3.优化MqttServerCredential中帐号或密码为空时的处理;
 
 ## 2023-10-18   v 1.0.1
 
@@ -103,6 +111,9 @@ Cake
 | XiaoFeng.Onvif | XiaoFeng.Onvif | :white_check_mark: | 视频监控库Onvif协议 | XiaoFeng.Onvif 基于.NET平台使用C#封装Onvif常用接口、设备、媒体、云台等功能， 拒绝WCF服务引用动态代理生成wsdl类文件 ， 使用原生XML扩展标记语言封装参数，所有的数据流向都可控。 |
 | FayElf.Plugins.WeChat | FayElf.Plugins.WeChat | :white_check_mark: | 微信公众号，小程序类库 | 微信公众号，小程序类库。 |
 | XiaoFeng.Mqtt | XiaoFeng.Mqtt | :white_check_mark: | MQTT协议 | XiaoFeng.Mqtt中间件,支持.NET框架、.NET内核和.NET标准库,一种非常方便操作的客户端工具。实现了MQTT客户端，MQTT服务端,同时支持TCP，WebSocket连接。支持协议版本3.0.0,3.1.0,5.0.0。 |
+| XiaoFeng.Modbus | XiaoFeng.Modbus | :white_check_mark: | MODBUS协议 | MODBUS协议,支持RTU、ASCII、TCP三种方式进行通信，自动离线保存服务端数据 |
+| XiaoFeng.Mvc.AdminWinDesk | XiaoFeng.Mvc.AdminWinDesk | :white_check_mark: | XiaoFeng.Mvc后台皮肤 | 模仿windows桌面后台皮肤 |
+| FayElf.Cube.Blog | FayElf.Cube.Blog | :white_check_mark: | XiaoFeng.Mvc开发的技术博客 | 使用低代码开发框架（XiaoFeng.Mvc）+Windows后台皮肤(XiaoFeng.Mvc.AdminWinDesk)，开发的一个博客平台。 |
 
 
 # XiaoFeng.Mqtt
