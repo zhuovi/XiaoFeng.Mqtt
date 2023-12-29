@@ -49,6 +49,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <param name="allowClientIp">允许IP</param>
         public MqttServerCredential(string userName, string password, IList<string> allowClientIp)
         {
+            if (userName.IsNullOrEmpty() || password.IsNullOrEmpty()) return;
             this.UserName = userName;
             this.Password = password;
             AllowClientIp = allowClientIp;

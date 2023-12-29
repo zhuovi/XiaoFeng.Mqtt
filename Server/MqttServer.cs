@@ -1378,7 +1378,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <param name="userName">帐号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
-        public void AddCredential(string userName, string password, params string[] allClientIp) => this.AddCredential(userName, password, allClientIp);
+        public void AddCredential(string userName, string password, params string[] allowClientIp) => this.AddCredential(userName, password, allowClientIp);
         /// <summary>
         /// 设置当前帐号允许IP
         /// </summary>
@@ -1387,6 +1387,7 @@ namespace XiaoFeng.Mqtt.Server
         public void AddCredentialAllowClientIp(string userName, string allowClientIp)
         {
             if (this.MqttServerCredentials == null) this.MqttServerCredentials = new ConcurrentDictionary<string, IMqttServerCredential>();
+            if (userName.IsNullOrEmpty() || allowClientIp.IsNullOrEmpty()) return;
             if (this.MqttServerCredentials.TryGetValue(userName, out var credential))
             {
                 if (credential.AllowClientIp == null) credential.AllowClientIp = new List<string>();
@@ -1401,7 +1402,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <returns></returns>
         public bool RemoveCredential(string userName)
         {
-            if (this.MqttServerCredentials == null) return false;
+            if (this.MqttServerCredentials == null || userName.IsNullOrEmpty()) return false;
             return this.MqttServerCredentials.TryRemove(userName, out var _);
         }
         #endregion
