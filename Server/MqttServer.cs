@@ -317,7 +317,7 @@ namespace XiaoFeng.Mqtt.Server
                     var connActResult = await this.ConnActAsync(client, connPacket).ConfigureAwait(false);
                     if (connActResult.ResultType == ResultType.Error)
                     {
-                        client.Stop();
+                        //client.Stop();
                         OnError?.Invoke(this, connActResult.Message);
                         return;
                     }
@@ -562,7 +562,7 @@ namespace XiaoFeng.Mqtt.Server
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
-            if (packet.PasswordFlag && packet.Password.IsNotNullOrEmpty() && packet.Password.IsNotMatch(@"^[a-z0-9\-_]{1,23}$"))
+            if (packet.PasswordFlag && packet.Password.IsNotNullOrEmpty() && packet.Password.IsNotMatch(@"^[\s\S]{1,23}$"))
             {
                 AckPacket.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
                 AckPacket.ReasonString = result.Message = $"Client Password [{packet.Password}] verification failed";
@@ -925,7 +925,7 @@ namespace XiaoFeng.Mqtt.Server
         public async Task<ResultPacket> DisconnectAsync(ISocketClient client, DisconnectPacket packet)
         {
             var result = new ResultPacket(packet, ResultType.Success, "");
-            if (!await this.SendAsync(packet, client).ConfigureAwait(false)) result.ResultType = ResultType.Error;
+            if (!await this.SendAsync(packet, client)) result.ResultType = ResultType.Error;
             return result;
         }
         #endregion
@@ -1319,13 +1319,21 @@ namespace XiaoFeng.Mqtt.Server
             if (client != null && client.Active && client.Connected)
             {
                 var ClientData = client.GetClientData()?.ConnectPacket;
-                if (ClientData == null) return false;
+                if (ClientData == null)
+                {
+                    if (packet is DisconnectPacket)
+                    {
+                        await client.SendAsync(bytes, MessageType.Binary).ConfigureAwait(false);
+                        this.StopClientAsync(client,0).ConfigureAwait(false).GetAwaiter();
+                        return true;
+                    }
+                    else
+                        return false;
+                }
                 MqttHelper.GetPacketSharding(bytes, ClientData.MaximumPacketSize).Each(async bs =>
                 {
                     await client.SendAsync(bs, MessageType.Binary).ConfigureAwait(false);
                 });
-                if (packet is DisconnectPacket)
-                    client.Stop();
                 return true;
             }
             if (this.Server.Clients.Count == 0) return false;
@@ -1339,6 +1347,21 @@ namespace XiaoFeng.Mqtt.Server
                 });
             });
             return await Task.FromResult(true);
+        }
+        #endregion
+
+        #region 停止客户端
+        /// <summary>
+        /// 几秒后断开客户端
+        /// </summary>
+        /// <param name="client">客户端</param>
+        /// <param name="delay">延迟多长时间再停止 单位为秒</param>
+        /// <returns></returns>
+        public async Task StopClientAsync(ISocketClient client, int delay = 5)
+        {
+            if (delay > 0) await Task.Delay(delay * 1000);
+            if (client != null)
+                client.Stop();
         }
         #endregion
 

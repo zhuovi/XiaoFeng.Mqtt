@@ -82,7 +82,7 @@ namespace XiaoFeng.Mqtt.Client
         /// <summary>
         /// 自动连接周期 单位秒
         /// </summary>
-        private int _ReConnectPeriod = 3;
+        private int _ReConnectPeriod = 6;
         /// <summary>
         /// 自动连接周期 单位秒
         /// </summary>
@@ -91,10 +91,10 @@ namespace XiaoFeng.Mqtt.Client
             get
             {
                 if (this._ReConnectPeriod <= 0)
-                    this._ReConnectPeriod = 1;
+                    this._ReConnectPeriod = 5;
                 return this._ReConnectPeriod;
             }
-            set => this._ReConnectPeriod = value <= 0 ? 1 : value;
+            set => this._ReConnectPeriod = value <= 0 ? 5 : value;
         }
         #endregion
 

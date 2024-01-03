@@ -264,6 +264,7 @@ namespace XiaoFeng.Mqtt.Packets
         public override bool ReadBuffer(MqttBufferReader reader)
         {
             if (reader.Length == 0) return false;
+            if (this.PacketType != PacketType.CONNACK) return false;
             this.IsSessionPresent = reader.ReadByte() > 0;
             this.ReasonCode = (ReasonCode)reader.ReadByte();
             this.ReturnCode = ToReturnCode(this.ReasonCode);
@@ -333,7 +334,8 @@ namespace XiaoFeng.Mqtt.Packets
                                     this.ServerReference = reader.ReadString();
                                     break;
                                 default:
-                                    throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
+                                    return false;
+                                    //throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
                             }
                         }
                     }

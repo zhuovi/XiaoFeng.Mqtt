@@ -190,8 +190,8 @@ namespace XiaoFeng.Mqtt.Client
                 OnStoped?.Invoke(this);
                 if (this.ClientOptions.IsAutoConnect)
                 {
-                    await Task.Delay(this.ClientOptions.ReConnectPeriod * 1000);
-                    this.ConnectAsync().ConfigureAwait(false).GetAwaiter();
+                    await Task.Delay(this.ClientOptions.ReConnectPeriod * 1000).ConfigureAwait(false);
+                    await this.ConnectAsync().ConfigureAwait(false);
                 }
             };
             return client;
@@ -259,6 +259,7 @@ namespace XiaoFeng.Mqtt.Client
             else
             {
                 this.OnError?.Invoke(this, "Connect failed.");
+                this.Stop();
                 return await Task.FromResult(false);
             }
         }
@@ -295,7 +296,6 @@ namespace XiaoFeng.Mqtt.Client
                                 ReasonString = "PUBLISH QoS is 0x03"
                             };
                             OnError?.Invoke(this, disPacket.ReasonString);
-                            //DisconnectAsync(disconnPacket).ConfigureAwait(false).GetAwaiter();
                             return;
                         }
                         if (this.PublishPacket.QualityOfServiceLevel > QualityOfServiceLevel.Reserved)
@@ -367,6 +367,8 @@ namespace XiaoFeng.Mqtt.Client
                     {
                         ServerMovedAsync(disconnPacket.ServerReference).ConfigureAwait(false).GetAwaiter();
                     }
+                    else
+                        this.Stop();
                     break;
                 case PacketType.PINGRESP:
                     var pingRespPacket = new PingRespPacket(bytes, this.ClientOptions.ProtocolVersion);
@@ -444,6 +446,13 @@ namespace XiaoFeng.Mqtt.Client
                 bytes = packet.UnPacket(bytes);
             }
             var connAct = new ConnectActPacket(bytes);
+            if (connAct.PacketType == PacketType.DISCONNECT)
+            {
+                var disConnect = new DisconnectPacket(bytes);
+                OnMessageAsync(new ResultPacket(disConnect, resultType: ResultType.Success, $"Received {connAct.PacketType} from server ({disConnect}).")).ConfigureAwait(false).GetAwaiter();
+                this.Stop();
+                return connAct;
+            }
             OnMessageAsync(new ResultPacket(connAct,resultType: ResultType.Success, $"Received {connAct.PacketType} from server ({connAct}).")).ConfigureAwait(false).GetAwaiter();
             if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED)
             {
@@ -811,10 +820,20 @@ namespace XiaoFeng.Mqtt.Client
         {
             packet.ProtocolVersion = this.ClientOptions.ProtocolVersion;
 
-            if (!this.Connected) await this.ConnectAsync().ConfigureAwait(false);
-
+            if (!this.Connected || this.Client?.Connected == false)
+            {
+                var connAct = await this.ConnectAsync().ConfigureAwait(false);
+                if (connAct == null) return false;
+                if (connAct.PacketType == PacketType.DISCONNECT)
+                {
+                    return false;
+                }
+                else if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED)
+                {
+                    return false;
+                }
+            }
             OnMessageAsync(new ResultPacket(packet, ResultType.Success, $"Sending {packet.PacketType} to server ({packet}).")).ConfigureAwait(false).GetAwaiter();
-
             MqttHelper.GetPacketSharding(packet.ToArray(), this.ClientOptions.MaximumPacketSize).Each(async bs =>
             {
                 await this.Client.SendAsync(bs, MessageType.Binary).ConfigureAwait(false);
