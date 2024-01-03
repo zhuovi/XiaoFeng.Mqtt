@@ -393,8 +393,9 @@ namespace XiaoFeng.Mqtt.Packets
             var connectFlags = 0b0000_0000;
             if (this.UserNameFlag) connectFlags |= 0b1000_0000;
             if (this.PasswordFlag) connectFlags |= 0b0100_0000;
-            if (this.WillTopic.IsNotNullOrEmpty() || this.WillMessage != null) this.WillFlag = true;
+            if (this.WillTopic.IsNotNullOrEmpty() || this.WillMessage != null || this.WillMessage.Length == 0) this.WillFlag = true;
             if (this.WillFlag) connectFlags |= 0b0000_0100;
+            else this.WillRetain = false;
             connectFlags |= ((byte)this.WillQoS << 3) & 0b0001_1000;
             if (this.WillRetain) connectFlags |= 0b0010_0000;
             if (this.CleanSession) connectFlags |= 0b0000_0010;
