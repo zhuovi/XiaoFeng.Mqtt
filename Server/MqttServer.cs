@@ -323,7 +323,7 @@ namespace XiaoFeng.Mqtt.Server
                     }
                     else
                     {
-                        if (connPacket.WillMessage == null || connPacket.WillMessage.Length == 0)
+                        if (connPacket.WillFlag && (connPacket.WillMessage == null || connPacket.WillMessage.Length == 0))
                             OnMessageAsync(client, new ResultPacket(connPacket, ResultType.Success, "No WillMessage specified.")).ConfigureAwait(false).GetAwaiter();
                         result = new ResultPacket(connActResult.MqttPacket, ResultType.Success, $"Sending CONNACK to {connPacket.ClientId} ({connActResult.MqttPacket}).");
                     }
