@@ -42,6 +42,10 @@ namespace XiaoFeng.Mqtt.Internal
         /// 内存缓存
         /// </summary>
         private MemoryStream Data { get; set; }
+        /// <summary>
+        /// 错误回调
+        /// </summary>
+        public Action<string> Callback { get; set; }
         #endregion
 
         #region 方法
@@ -98,7 +102,7 @@ namespace XiaoFeng.Mqtt.Internal
         {
             if (length <= 0) length = this.Length - this.Position;
             if (length > this.Length - this.Position) length = this.Length - this.Position;
-            if(length==0) return Array.Empty<byte>();
+            if (length == 0) return Array.Empty<byte>();
             if (!this.ValidateBufferLength((int)length)) return Array.Empty<byte>();
             var bytes = new byte[length];
             this.Data.Read(bytes, 0, (int)length);
@@ -204,7 +208,9 @@ namespace XiaoFeng.Mqtt.Internal
                 value += (uint)((encodedByte & 127) * multiplier);
                 if (multiplier > (128 * 128 * 128))
                 {
-                    throw new MqttException("Malformed Remaining Length.");
+                    this.Callback?.Invoke("Malformed Remaining Length.");
+                    return 0;
+                    //throw new MqttException("Malformed Remaining Length.");
                 }
                 multiplier *= 128;
                 size++;
@@ -224,7 +230,8 @@ namespace XiaoFeng.Mqtt.Internal
 
             if (this.Length < newPosition)
             {
-                LogHelper.Error(new MqttException($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读."));
+                this.Callback?.Invoke($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读.");
+                //LogHelper.Error(new MqttException($"需要至少 {length} 个字节，但当前缓存流只有 {this.Length - this.Position} 字节可读."));
                 //LogHelper.Debug(this.Data.ToArray().Join(" "));
                 return false;
             }

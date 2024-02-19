@@ -40,6 +40,20 @@ namespace XiaoFeng.Mqtt
         /// <summary>
         /// 设置数据
         /// </summary>
+        /// <param name="mqttPacket">包</param>
+        /// <param name="resultType">结果类型</param>
+        /// <param name="reasonCode">原因码</param>
+        /// <param name="message">消息</param>
+        public ResultPacket(MqttPacket mqttPacket, ResultType resultType, ReasonCode reasonCode, string message)
+        {
+            ResultType = resultType;
+            Message = message;
+            ReasonCode = reasonCode;
+            MqttPacket = mqttPacket;
+        }
+        /// <summary>
+        /// 设置数据
+        /// </summary>
         /// <param name="resultType">结果类型</param>
         /// <param name="message">消息</param>
         public ResultPacket(ResultType resultType, string message) : this(null, resultType, message) { }
@@ -69,6 +83,10 @@ namespace XiaoFeng.Mqtt
         /// 包
         /// </summary>
         public MqttPacket MqttPacket { get; set; }
+        /// <summary>
+        /// 原因码
+        /// </summary>
+        public ReasonCode ReasonCode { get; set; }
         #endregion
 
         #region 方法

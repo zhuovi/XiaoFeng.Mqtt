@@ -53,6 +53,10 @@ namespace XiaoFeng.Mqtt.Packets
             this.ProtocolVersion = protocolVersion;
             this._PacketSize = buffer.Length;
             this.Reader = new MqttBufferReader(buffer);
+            this.Reader.Callback = m =>
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, m);
+            };
             this.UnPacket();
         }
         #endregion
@@ -114,9 +118,27 @@ namespace XiaoFeng.Mqtt.Packets
         /// 解包状态
         /// </summary>
         public PacketStatus PacketStatus { get; set; } = PacketStatus.Success;
+        /// <summary>
+        /// 错误码
+        /// </summary>
+        public ReasonCode ErrorCode { get; set; }
+        /// <summary>
+        /// 错误信息
+        /// </summary>
+        public string ErrorMessage { get; set; }
         #endregion
 
         #region 方法
+        /// <summary>
+        /// 设置错误信息
+        /// </summary>
+        /// <param name="reasonCode">错误码</param>
+        /// <param name="errorMessage">错误消息</param>
+        public void SetError(ReasonCode reasonCode, string errorMessage = "")
+        {
+            this.ErrorCode = reasonCode;
+            this.ErrorMessage = errorMessage.IsNullOrEmpty() ? reasonCode.GetDescription() : errorMessage;
+        }
         /// <summary>
         /// 读取剩下字节
         /// </summary>
@@ -147,6 +169,12 @@ namespace XiaoFeng.Mqtt.Packets
             var flag = this.Reader.ReadByte();
 
             this.PacketType = (PacketType)(flag >> 4);
+            if ((int)this.PacketType < 0 || (int)this.PacketType > 15)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, "无效报文.");
+                this.PacketStatus = PacketStatus.Error;
+                return;
+            }
             this._FixedFlags = flag & 0x0F;
             this.SetFlags(flag);
             var length = this.Reader.ReadVariableByteInteger(out var size);
@@ -172,9 +200,6 @@ namespace XiaoFeng.Mqtt.Packets
             var position = this.Reader.Position;
             this.Reader.WriteBuffer(buffer);
             this.Reader.Position = position;
-            //this.Reader.Seek(0, SeekOrigin.Begin);
-            //this.Reader.SetBuffer(this.Reader.ReadBytes().Concat(buffer).ToArray());
-            //this.Reader.Position = position;
         }
         /// <summary>
         /// 写流

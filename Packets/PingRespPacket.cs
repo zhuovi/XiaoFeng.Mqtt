@@ -55,6 +55,16 @@ namespace XiaoFeng.Mqtt.Packets
 
         #region 方法
         ///<inheritdoc/>
+        public override bool ReadBuffer(MqttBufferReader reader)
+        {
+            if (this.PacketType != PacketType.PINGRESP)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, $"无效报文.");
+                return false;
+            }
+            return true;
+        }
+        ///<inheritdoc/>
         public override string ToString()
         {
             string version;
@@ -73,7 +83,7 @@ namespace XiaoFeng.Mqtt.Packets
                     version = "unknow";
                     break;
             }
-            return $"{this.PacketType}: [ProtocolVersion={version}]";
+            return $"{this.PacketType}: [ProtocolVersion={version}]{(this.PacketStatus == PacketStatus.Error ? $" [ErrorCode={this.ErrorCode}] [ErrorMessage={this.ErrorMessage}]" : "")}";
         }
         #endregion
     }

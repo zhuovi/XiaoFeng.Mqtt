@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using XiaoFeng.Mqtt.Client;
 using XiaoFeng.Mqtt.Internal;
 using XiaoFeng.Mqtt.Packets;
 
@@ -37,6 +38,10 @@ namespace XiaoFeng.Mqtt
         /// 我的订阅
         /// </summary>
         ConcurrentDictionary<string, TopicFilter> TopicFilters { get; set; }
+        /// <summary>
+        /// 客户端配置
+        /// </summary>
+        MqttClientOptions ClientOptions { get; set; }
         #endregion
 
         #region 事件
@@ -52,6 +57,10 @@ namespace XiaoFeng.Mqtt
         /// 消息
         /// </summary>
         event MqttClientMessageEventHandler OnMessage;
+        /// <summary>
+        /// MQTT客户端接收所订阅的消息事件
+        /// </summary>
+        event MqttClientPublishMessageEventHandler OnPublishMessage;
         /// <summary>
         /// 断开
         /// </summary>

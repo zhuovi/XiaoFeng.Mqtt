@@ -311,7 +311,7 @@ namespace XiaoFeng.Mqtt.Server
 
             switch (packetType)
             {
-                case PacketType.CONNECT:
+                case PacketType.CONNECT://连接包
                     var connPacket = new ConnectPacket(bytes, ProtocolVersion);
                     OnMessageAsync(client, new ResultPacket(connPacket, ResultType.Success, $"New client connected from {client.EndPoint} as {connPacket.ClientId} ({connPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var connActResult = await this.ConnActAsync(client, connPacket).ConfigureAwait(false);
@@ -319,6 +319,14 @@ namespace XiaoFeng.Mqtt.Server
                     {
                         //client.Stop();
                         OnError?.Invoke(this, connActResult.Message);
+                        var DisconnPacket = new DisconnectPacket
+                        {
+                            ReasonCode = connActResult.ReasonCode,
+                            ReasonString = connActResult.Message
+                        };
+                        OnMessageAsync(client, new ResultPacket(DisconnPacket, ResultType.Success, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}")).ConfigureAwait(false).GetAwaiter();
+
+                        await this.DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
                         return;
                     }
                     else
@@ -328,7 +336,7 @@ namespace XiaoFeng.Mqtt.Server
                         result = new ResultPacket(connActResult.MqttPacket, ResultType.Success, $"Sending CONNACK to {connPacket.ClientId} ({connActResult.MqttPacket}).");
                     }
                     break;
-                case PacketType.AUTH:
+                case PacketType.AUTH://认证包
                     var authPacket = new AuthPacket(bytes, ProtocolVersion);
                     OnMessageAsync(client, new ResultPacket(authPacket, ResultType.Success, $"Received AUTH from {client.EndPoint} as {clientId} ({authPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var processAuthResult = await ProcessAuthPacketAsync(client, authPacket).ConfigureAwait(false);
@@ -337,7 +345,7 @@ namespace XiaoFeng.Mqtt.Server
                         OnError?.Invoke(this, processAuthResult.Message);
                     }
                     break;
-                case PacketType.DISCONNECT:
+                case PacketType.DISCONNECT://断开包
                     var disconnPacket = new DisconnectPacket(bytes, ProtocolVersion);
                     OnMessageAsync(client, new ResultPacket(disconnPacket, ResultType.Success, $"Received DISCONNECT from {client.EndPoint} as {clientId} ({disconnPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var processDisconnResult = await ProcessDisconnectAsync(client, disconnPacket).ConfigureAwait(false);
@@ -346,7 +354,7 @@ namespace XiaoFeng.Mqtt.Server
                         OnError?.Invoke(this, processDisconnResult.Message);
                     }
                     return;
-                case PacketType.PINGREQ:
+                case PacketType.PINGREQ://Ping包
                     var pingReqPacket = new PingReqPacket(bytes, ProtocolVersion);
                     OnMessageAsync(client, new ResultPacket(pingReqPacket, ResultType.Success, $"Received PINGREQ from {client.EndPoint} as {clientId} ({pingReqPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var pingRespResult = await PingRespAsync(client, pingReqPacket).ConfigureAwait(false);
@@ -360,7 +368,7 @@ namespace XiaoFeng.Mqtt.Server
                         result = new ResultPacket(pingRespResult.MqttPacket, ResultType.Success, $"Sending PINGRESP to {clientId} ({pingRespResult.MqttPacket}).");
                     }
                     break;
-                case PacketType.PUBLISH:
+                case PacketType.PUBLISH://发布消息包
                     var publishPacket = new PublishPacket(bytes, ProtocolVersion);
                     if (publishPacket.IsSharding)
                     {
@@ -379,7 +387,7 @@ namespace XiaoFeng.Mqtt.Server
                         result = new ResultPacket(publishResult.MqttPacket, ResultType.Success, $"Sending {publishResult.MqttPacket.PacketType.ToString().ToUpper()} to {clientId} ({publishResult.MqttPacket}).");
                     }
                     break;
-                case PacketType.PUBREL:
+                case PacketType.PUBREL://发布释放包
                     var RelPacket = new PubRelPacket(bytes, ProtocolVersion);
                     OnMessageAsync(client, new ResultPacket(RelPacket, ResultType.Success, $"Received {RelPacket.PacketType} from {client.EndPoint} as {clientId} ({RelPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var pubcompResult = await PubCompAsync(client, RelPacket).ConfigureAwait(false);
@@ -393,7 +401,7 @@ namespace XiaoFeng.Mqtt.Server
                         result = new ResultPacket(pubcompResult.MqttPacket, ResultType.Success, $"Sending PUBCOMP to {clientId} ({pubcompResult.MqttPacket}).");
                     }
                     break;
-                case PacketType.SUBSCRIBE:
+                case PacketType.SUBSCRIBE://订阅包
                     var subPacket = new SubscribePacket(bytes, ProtocolVersion);
                     OnMessageAsync(client, new ResultPacket(subPacket, ResultType.Success, $"Received {subPacket.PacketType} from {client.EndPoint} as {clientId} ({subPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var subActResult = await this.SubActAsync(client, subPacket).ConfigureAwait(false);
@@ -407,7 +415,7 @@ namespace XiaoFeng.Mqtt.Server
                         result = new ResultPacket(subActResult.MqttPacket, ResultType.Success, $"Sending SUBACK to {clientId} ({subActResult.MqttPacket}).");
                     }
                     break;
-                case PacketType.UNSUBSCRIBE:
+                case PacketType.UNSUBSCRIBE://取消订阅包
                     var unsubPacket = new UnsubscribePacket(bytes, ProtocolVersion);
                     OnMessageAsync(client, new ResultPacket(unsubPacket, ResultType.Success, $"Received  {unsubPacket.PacketType}  from {client.EndPoint} as {clientId} ({unsubPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var unsubActResult = await this.UnsubAckAsync(client, unsubPacket).ConfigureAwait(false);
@@ -452,30 +460,37 @@ namespace XiaoFeng.Mqtt.Server
         {
             var result = new ResultPacket(packet, ResultType.Error, "");
             var AckPacket = new ConnectActPacket();
+            if (packet.PacketStatus == PacketStatus.Error)
+            {
+                AckPacket.ReasonCode = result.ReasonCode = packet.ErrorCode;
+                AckPacket.ReasonString = result.Message = packet.ErrorMessage;
+                await SendAsync(AckPacket, client).ConfigureAwait(false);
+                return result;
+            }
             if ((int)packet.ProtocolVersion <= 0 || (int)packet.ProtocolVersion > 5)
             {
-                AckPacket.ReasonCode = ReasonCode.UNSUPPORTED_PROTOCOL_VERSION;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.UNSUPPORTED_PROTOCOL_VERSION;
                 AckPacket.ReasonString = result.Message = $"Connection Refused: Unsupported Protocol Version [{packet.ProtocolVersion}] ";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if ((packet.ProtocolVersion == MqttProtocolVersion.V310 && packet.ProtocolName != "MQIsdp") || ((int)packet.ProtocolVersion > 3 && packet.ProtocolName != "MQTT"))
             {
-                AckPacket.ReasonCode = ReasonCode.UNSUPPORTED_PROTOCOL_VERSION;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.UNSUPPORTED_PROTOCOL_VERSION;
                 AckPacket.ReasonString = result.Message = $"Connection Refused: Unsupported Protocol Version [{packet.ProtocolName}] ";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.ConnectFlagReserved)
             {
-                AckPacket.ReasonCode = ReasonCode.MALFORMED_PACKET;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.MALFORMED_PACKET;
                 AckPacket.ReasonString = result.Message = $"Connection Refused: Reserved Flag is not 0";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (!packet.WillFlag && packet.WillRetain)
             {
-                AckPacket.ReasonCode = ReasonCode.MALFORMED_PACKET;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.MALFORMED_PACKET;
                 AckPacket.ReasonString = result.Message = $"Connection Refused: Will Retain is not 0";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
@@ -483,7 +498,7 @@ namespace XiaoFeng.Mqtt.Server
 
             if (packet.WillRetain && packet.WillMessage != null && packet.WillMessage.Length > 0 && !this.ServerOptions.RetainAvailable)
             {
-                AckPacket.ReasonCode = ReasonCode.RETAIN_NOT_SUPPORTED;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.RETAIN_NOT_SUPPORTED;
                 AckPacket.ReasonString = result.Message = $"Connection Refused: Retain not supported";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
@@ -491,14 +506,14 @@ namespace XiaoFeng.Mqtt.Server
 
             if (packet.ClientId.IsNullOrEmpty())
             {
-                AckPacket.ReasonCode = ReasonCode.CLIENT_IDENTIFIER_NOT_VALID;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.CLIENT_IDENTIFIER_NOT_VALID;
                 AckPacket.ReasonString = result.Message = $"Connection Refused: ClientId is null or empty";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (this.Contains(packet.ClientId))
             {
-                AckPacket.ReasonCode = ReasonCode.CLIENT_IDENTIFIER_NOT_VALID;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.CLIENT_IDENTIFIER_NOT_VALID;
                 AckPacket.ReasonString = result.Message = $"Connection Refused: ClientId [{packet.ClientId}] is already connected";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
@@ -508,76 +523,78 @@ namespace XiaoFeng.Mqtt.Server
 
             if (packet.WillFlag && MqttHelper.IsValidTopicName(packet.WillTopic))
             {
-                AckPacket.ReasonCode = ReasonCode.UNSPECIFIED_ERROR;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.UNSPECIFIED_ERROR;
                 AckPacket.ReasonString = result.Message = $"Client WillTopic [{packet.WillTopic}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.WillFlag && (packet.WillMessage == null || packet.WillMessage.Length == 0 || packet.WillMessage.Length > 65535))
             {
-                AckPacket.ReasonCode = ReasonCode.UNSPECIFIED_ERROR;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.UNSPECIFIED_ERROR;
                 AckPacket.ReasonString = result.Message = $"Client WillMessage [{packet.WillMessage}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.ProtocolVersion == MqttProtocolVersion.V500 && packet.WillFlag && (packet.WillUserProperties == null || packet.WillUserProperties.Count == 0))
             {
-                AckPacket.ReasonCode = ReasonCode.UNSPECIFIED_ERROR;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.UNSPECIFIED_ERROR;
                 AckPacket.ReasonString = result.Message = $"Client WillUserProperties [{packet.WillUserProperties.ToJson()}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.UserNameFlag && packet.UserName.Length > 65535)
             {
-                AckPacket.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
                 AckPacket.ReasonString = result.Message = $"Client UserName [{packet.UserName}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.PasswordFlag && packet.Password.Length > 65535)
             {
-                AckPacket.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
                 AckPacket.ReasonString = result.Message = $"Client Password [{packet.Password}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.UserNameFlag && packet.UserName.IsNotNullOrEmpty() && packet.PasswordFlag && packet.Password.IsNullOrEmpty())
             {
-                AckPacket.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
                 AckPacket.ReasonString = result.Message = $"Client Password [{packet.Password}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.UserNameFlag && packet.UserName.IsNullOrEmpty() && packet.PasswordFlag && packet.Password.IsNotNullOrEmpty())
             {
-                AckPacket.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
                 AckPacket.ReasonString = result.Message = $"Client UserName [{packet.UserName}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.UserNameFlag && packet.UserName.IsNotNullOrEmpty() && packet.UserName.IsNotMatch(@"^[a-z0-9\-_]{1,23}$"))
             {
-                AckPacket.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
                 AckPacket.ReasonString = result.Message = $"Client UserName [{packet.UserName}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.PasswordFlag && packet.Password.IsNotNullOrEmpty() && packet.Password.IsNotMatch(@"^[\s\S]{1,23}$"))
             {
-                AckPacket.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
                 AckPacket.ReasonString = result.Message = $"Client Password [{packet.Password}] verification failed";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
             if (packet.WillFlag && packet.WillTopic.IsNotNullOrEmpty() && !MqttHelper.IsValidTopicName(packet.WillTopic))
             {
-                result.Message = $"Client WillTopic [{packet.WillTopic}] verification failed";
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.TOPIC_NAME_INVALID;
+                AckPacket.ReasonString = result.Message = $"Client WillTopic [{packet.WillTopic}] verification failed";
+                await SendAsync(AckPacket, client).ConfigureAwait(false);
                 return result;
             }
 
             if (!this.ServerOptions.AllowAnonymousAccess && (!packet.UserNameFlag || !packet.PasswordFlag))
             {
-                var DisconnPacket = new DisconnectPacket()
+                /*var DisconnPacket = new DisconnectPacket()
                 {
                     ReasonCode = ReasonCode.BANNED,
                     ReasonString = "Authentication failed: The server does not allow anonymous access"
@@ -586,11 +603,16 @@ namespace XiaoFeng.Mqtt.Server
                 await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
                 OnMessageAsync(client, new ResultPacket(DisconnPacket, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}")).ConfigureAwait(false).GetAwaiter();
                 result.Message = DisconnPacket.ReasonString;
+                */
+                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.BANNED;
+                AckPacket.ReasonString = result.Message = $"Authentication failed: The server does not allow anonymous access";
+                await SendAsync(AckPacket, client).ConfigureAwait(false);
+
                 return result;
             }
             if (packet.UserNameFlag && packet.UserName.IsNotNullOrEmpty())
             {
-                var DisconnPacket = new DisconnectPacket()
+                /*var DisconnPacket = new DisconnectPacket()
                 {
                     ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD,
                     ReasonString = "Authentication failed: Account or password error"
@@ -621,6 +643,25 @@ namespace XiaoFeng.Mqtt.Server
                     await DisconnectAsync(client, DisconnPacket).ConfigureAwait(false);
                     OnMessageAsync(client, new ResultPacket(DisconnPacket,ResultType.Success, $"Sending {DisconnPacket.PacketType} to {client.EndPoint}")).ConfigureAwait(false).GetAwaiter();
                     result.Message = DisconnPacket.ReasonString;
+                    return result;
+                }*/
+                if (this.MqttServerCredentials != null && this.MqttServerCredentials.Count > 0 && this.MqttServerCredentials.TryGetValue(packet.UserName, out var credential))
+                {
+                    if (packet.Password == credential.Password)
+                    {
+                        if (credential.AllowClientIp != null && credential.AllowClientIp.Count > 0 && !credential.AllowClientIp.Contains(client.EndPoint.Address.ToString()))
+                        {
+                            AckPacket.ReasonCode = result.ReasonCode = ReasonCode.NOT_AUTHORIZED;
+                            AckPacket.ReasonString = result.Message = "Authentication failed: IP address is not allowed";
+                            await SendAsync(AckPacket, client).ConfigureAwait(false);
+                            return result;
+                        }
+                    }
+                }
+                else
+                {
+                    AckPacket.ReasonCode = result.ReasonCode = ReasonCode.BAD_USERNAME_OR_PASSWORD;
+                    AckPacket.ReasonString = result.Message = "Authentication failed: Account or password error";
                     return result;
                 }
             }

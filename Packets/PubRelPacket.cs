@@ -59,6 +59,16 @@ namespace XiaoFeng.Mqtt.Packets
 
         #region 方法
         ///<inheritdoc/>
+        public override bool ReadBuffer(MqttBufferReader reader)
+        {
+            if (this.PacketType != PacketType.PUBREL)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, $"无效报文.");
+                return false;
+            }
+            return true;
+        }
+        ///<inheritdoc/>
         public override byte GetFlags(int flags = 0)
         {
             return base.GetFlags(0x02);

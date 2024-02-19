@@ -455,14 +455,27 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override bool ReadBuffer(MqttBufferReader reader)
         {
+            if (this.PacketType != PacketType.CONNECT)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, $"无效报文.");
+                return false;
+            }
             //协议名称
             this.ProtocolName = reader.ReadString();
             //协议等级
             this.ProtocolVersion = (MqttProtocolVersion)reader.ReadByte();
 
-            if (this.ProtocolName != "MQTT" && (int)this.ProtocolVersion > 3 || (this.ProtocolName!= "MQIsdp" && this.ProtocolVersion== MqttProtocolVersion.V310))
+            if (this.ProtocolVersion == 0)
             {
-                throw new MqttException("MQTT协议名称与MQTT 版本不匹配.");
+                this.SetError(ReasonCode.UNSUPPORTED_PROTOCOL_VERSION, "协议版本不支持.");
+                return false;
+            }
+
+            if (this.ProtocolName != "MQTT" && (int)this.ProtocolVersion > 3 || (this.ProtocolName != "MQIsdp" && this.ProtocolVersion == MqttProtocolVersion.V310))
+            {
+                this.SetError(ReasonCode.PROTOCOL_ERROR, "MQTT协议名称与MQTT版本不匹配.");
+                //throw new MqttException("MQTT协议名称与MQTT 版本不匹配.");
+                return false;
             }
 
             var connectFlags = reader.ReadByte();
@@ -527,7 +540,9 @@ namespace XiaoFeng.Mqtt.Packets
 
                                 break;
                             default:
-                                throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
+                                this.SetError(ReasonCode.PROTOCOL_ERROR, $"MQTT Protocol Error: {id}");
+                                return false;
+                                //throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
                         }
                     }
                 }
@@ -568,7 +583,9 @@ namespace XiaoFeng.Mqtt.Packets
                                     this.WillDelayInterval = reader.ReadFourByteInteger();
                                     break;
                                 default:
-                                    throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
+                                    this.SetError(ReasonCode.PROTOCOL_ERROR, $"MQTT Protocol Error: {id}");
+                                    return false;
+                                    //throw new MqttProtocolException($"MQTT Protocol Error: {id}");
                             }
                         }
                     }
@@ -588,7 +605,7 @@ namespace XiaoFeng.Mqtt.Packets
         /// <returns></returns>
         public override string ToString()
         {
-            return $"{this.PacketType}: [ClientId={this.ClientId}] [UserName={this.UserName}] [Password={(this.Password.IsNullOrEmpty() ? string.Empty : "******")}] [KeepAlive={this.KeepAlive}] [CleanSession={this.CleanSession}] [Qos={(int)this.WillQoS}] [WillTopic={this.WillTopic}] [SessionExpiryInterval={this.SessionExpiryInterval}] [ReceiveMaximum={this.ReceiveMaximum}] [MaximumPacketSize={this.MaximumPacketSize}] [TopicAliasMaximum={this.TopicAliasMaximum}] [RequestResponseInformation={(this.RequestResponseInformation ? 1 : 0)}] [RequestProblemInformation={(this.RequestProblemInformation ? 1 : 0)}] [AuthenticationMethod={this.AuthenticationMethod}] [WillDelayInterval={this.WillDelayInterval}] [WillContentType={this.WillContentType}] [WillPayloadFormatIndicator={(int)this.WillPayloadFormatIndicator}] [WillMessageExpiryInterval={this.WillMessageExpiryInterval}] [WillResponseTopic={this.WillResponseTopic}]";
+            return $"{this.PacketType}: [ClientId={this.ClientId}] [UserName={this.UserName}] [Password={(this.Password.IsNullOrEmpty() ? string.Empty : "******")}] [KeepAlive={this.KeepAlive}] [CleanSession={this.CleanSession}] [Qos={(int)this.WillQoS}] [WillTopic={this.WillTopic}] [SessionExpiryInterval={this.SessionExpiryInterval}] [ReceiveMaximum={this.ReceiveMaximum}] [MaximumPacketSize={this.MaximumPacketSize}] [TopicAliasMaximum={this.TopicAliasMaximum}] [RequestResponseInformation={(this.RequestResponseInformation ? 1 : 0)}] [RequestProblemInformation={(this.RequestProblemInformation ? 1 : 0)}] [AuthenticationMethod={this.AuthenticationMethod}] [WillDelayInterval={this.WillDelayInterval}] [WillContentType={this.WillContentType}] [WillPayloadFormatIndicator={(int)this.WillPayloadFormatIndicator}] [WillMessageExpiryInterval={this.WillMessageExpiryInterval}] [WillResponseTopic={this.WillResponseTopic}]{(this.PacketStatus == PacketStatus.Error ? $" [ErrorCode={this.ErrorCode}] [ErrorMessage={this.ErrorMessage}]" : "")}";
         }
         #endregion
     }

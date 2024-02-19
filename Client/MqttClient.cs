@@ -208,8 +208,8 @@ namespace XiaoFeng.Mqtt.Client
                 this.ClientOptions = new MqttClientOptions();
                 if (this.NetUri.UserName.IsNotNullOrEmpty())
                     this.ClientOptions.UserName = this.NetUri.UserName;
-                if(this.NetUri.Password.IsNotNullOrEmpty())
-                    this.ClientOptions.UserName=this.NetUri.Password;
+                if (this.NetUri.Password.IsNotNullOrEmpty())
+                    this.ClientOptions.Password = this.NetUri.Password;
                 if (this.NetUri.NetType.IsDefined<SslAttribute>())
                     this.ClientOptions.UseTls = true;
                 var paramer = this.NetUri.Parameters;
@@ -940,7 +940,7 @@ namespace XiaoFeng.Mqtt.Client
         /// </summary>
         /// <param name="result">结果</param>
         /// <returns></returns>
-        public async Task OnMessageAsync(ResultPacket result)
+        private async Task OnMessageAsync(ResultPacket result)
         {
             if (OnMessage == null) return;
             await Task.Run(() =>

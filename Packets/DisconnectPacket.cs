@@ -100,6 +100,11 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override bool ReadBuffer(MqttBufferReader reader)
         {
+            if (this.PacketType != PacketType.DISCONNECT)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, $"无效报文.");
+                return false;
+            }
             this.ReasonCode = (ReasonCode)reader.ReadByte();
             this.UserProperties = new List<MqttUserProperty>();
             if (this.ProtocolVersion == MqttProtocolVersion.V500)
@@ -126,7 +131,9 @@ namespace XiaoFeng.Mqtt.Packets
                                 this.UserProperties.Add(new MqttUserProperty(reader.ReadString(), reader.ReadString()));
                                 break;
                             default:
-                                throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
+                                this.SetError(ReasonCode.PROTOCOL_ERROR, $"MQTT Protocol Error: {id}");
+                                return false;
+                                //throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
                         }
                     }
                 }
@@ -136,7 +143,7 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override string ToString()
         {
-            return $"{this.PacketType}: [ReasonCode={this.ReasonCode}] [ReasonString={this.ReasonString}] [ServerReference={this.ServerReference}] [SessionExpiryInterval={this.SessionExpiryInterval}]";
+            return $"{this.PacketType}: [ReasonCode={this.ReasonCode}] [ReasonString={this.ReasonString}] [ServerReference={this.ServerReference}] [SessionExpiryInterval={this.SessionExpiryInterval}]{(this.PacketStatus == PacketStatus.Error ? $" [ErrorCode={this.ErrorCode}] [ErrorMessage={this.ErrorMessage}]" : "")}";
         }
         #endregion
     }

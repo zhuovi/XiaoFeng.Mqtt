@@ -95,6 +95,11 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override bool ReadBuffer(MqttBufferReader reader)
         {
+            if (this.PacketType != PacketType.AUTH)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, $"无效报文.");
+                return false;
+            }
             if (reader.EndOfStream)
             {
                 this.ReasonCode = ReasonCode.SUCCESS;
@@ -126,7 +131,9 @@ namespace XiaoFeng.Mqtt.Packets
                                 this.UserProperties.Add(new MqttUserProperty(reader.ReadString(), reader.ReadString()));
                                 break;
                             default:
-                                throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
+                                this.SetError(ReasonCode.PROTOCOL_ERROR, $"MQTT Protocol Error: {id}");
+                                return false;
+                                //throw new MqttProtocolException($"MQTT Protocol Error: {id}");
                         }
                     }
                 }
@@ -152,7 +159,7 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override string ToString()
         {
-            return $"{this.PacketType}: [ReasonCode={this.ReasonCode}] [ReasonString={this.ReasonString}] [AuthenticationMethod={this.AuthenticationMethod}]";
+            return $"{this.PacketType}: [ReasonCode={this.ReasonCode}] [ReasonString={this.ReasonString}] [AuthenticationMethod={this.AuthenticationMethod}]{(this.PacketStatus == PacketStatus.Error ? $" [ErrorCode={this.ErrorCode}] [ErrorMessage={this.ErrorMessage}]" : "")}";
         }
         #endregion
     }

@@ -97,6 +97,11 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override bool ReadBuffer(MqttBufferReader reader)
         {
+            if (this.PacketType != PacketType.SUBACK)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, $"无效报文.");
+                return false;
+            }
             this.PacketIdentifier = reader.ReadTwoByteInteger();
 
             if (!reader.EndOfStream)
@@ -120,7 +125,9 @@ namespace XiaoFeng.Mqtt.Packets
                                     this.UserProperties.Add(new MqttUserProperty(reader.ReadString(), reader.ReadString()));
                                     break;
                                 default:
-                                    throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
+                                    this.SetError(ReasonCode.PROTOCOL_ERROR, $"MQTT Protocol Error: {id}");
+                                    return false; 
+                                    //throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
                             }
                         }
                     }
@@ -136,7 +143,7 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override string ToString()
         {
-            return $"{this.PacketType}: [PacketIdentifier={this.PacketIdentifier}] [ReasonCode={this.ReasonCodes.Select(a => a.ToString()).Join(",")}] [ReasonString={this.ReasonString}]";
+            return $"{this.PacketType}: [PacketIdentifier={this.PacketIdentifier}] [ReasonCode={this.ReasonCodes.Select(a => a.ToString()).Join(",")}] [ReasonString={this.ReasonString}]{(this.PacketStatus == PacketStatus.Error ? $" [ErrorCode={this.ErrorCode}] [ErrorMessage={this.ErrorMessage}]" : "")}";
         }
         #endregion
     }

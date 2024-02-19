@@ -5,7 +5,6 @@ using System.Text;
 using XiaoFeng.Mqtt.Internal;
 using XiaoFeng.Mqtt.Protocol;
 using XiaoFeng.Net;
-using static System.Collections.Specialized.BitVector32;
 
 /****************************************************************
 *  Copyright © (2023) www.eelf.cn All Rights Reserved.          *
@@ -263,8 +262,16 @@ namespace XiaoFeng.Mqtt.Packets
         ///<inheritdoc/>
         public override bool ReadBuffer(MqttBufferReader reader)
         {
-            if (reader.Length == 0) return false;
-            if (this.PacketType != PacketType.CONNACK) return false;
+            if (reader.Length == 0)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, $"无效报文.");
+                return false;
+            }
+            if (this.PacketType != PacketType.CONNACK)
+            {
+                this.SetError(ReasonCode.MALFORMED_PACKET, $"无效报文.");
+                return false;
+            }
             this.IsSessionPresent = reader.ReadByte() > 0;
             this.ReasonCode = (ReasonCode)reader.ReadByte();
             this.ReturnCode = ToReturnCode(this.ReasonCode);
@@ -334,6 +341,7 @@ namespace XiaoFeng.Mqtt.Packets
                                     this.ServerReference = reader.ReadString();
                                     break;
                                 default:
+                                    this.SetError(ReasonCode.PROTOCOL_ERROR, $"MQTT Protocol Error: {id}");
                                     return false;
                                     //throw new MqttProtocolException(string.Format("MQTT Protocol Error: {0}", id));
                             }
@@ -379,7 +387,7 @@ namespace XiaoFeng.Mqtt.Packets
         /// <returns></returns>
         public override string ToString()
         {
-            return $"{this.PacketType}: [ReturnCode={this.ReturnCode}] [ReasonCode={this.ReasonCode}] [IsSessionPresent={this.IsSessionPresent}] [SessionExpiryInterval={this.SessionExpiryInterval}] [ReceiveMaximum={this.ReceiveMaximum}] [MaximumQoS={(int)this.MaximumQoS}] [RetainAvailable={(this.RetainAvailable ? 1 : 0)}] [MaximumPacketSize={this.MaximumPacketSize}] [AssignedClientIdentifier={this.AssignedClientIdentifier}] [TopicAliasMaximum={this.TopicAliasMaximum}] [WildcardSubscriptionAvailable={(this.WildcardSubscriptionAvailable ? 1 : 0)}] [SubscriptionIdentifiersAvailable={this.SubscriptionIdentifiersAvailable}] [SharedSubscriptionAvailable={this.SharedSubscriptionAvailable}] [ServerKeepAlive={this.ServerKeepAlive}] [ServerReference={this.ServerReference}]";
+            return $"{this.PacketType}: [ReturnCode={this.ReturnCode}] [ReasonCode={this.ReasonCode}] [IsSessionPresent={this.IsSessionPresent}] [SessionExpiryInterval={this.SessionExpiryInterval}] [ReceiveMaximum={this.ReceiveMaximum}] [MaximumQoS={(int)this.MaximumQoS}] [RetainAvailable={(this.RetainAvailable ? 1 : 0)}] [MaximumPacketSize={this.MaximumPacketSize}] [AssignedClientIdentifier={this.AssignedClientIdentifier}] [TopicAliasMaximum={this.TopicAliasMaximum}] [WildcardSubscriptionAvailable={(this.WildcardSubscriptionAvailable ? 1 : 0)}] [SubscriptionIdentifiersAvailable={this.SubscriptionIdentifiersAvailable}] [SharedSubscriptionAvailable={this.SharedSubscriptionAvailable}] [ServerKeepAlive={this.ServerKeepAlive}] [ServerReference={this.ServerReference}]{(this.PacketStatus == PacketStatus.Error ? $" [ErrorCode={this.ErrorCode}] [ErrorMessage={this.ErrorMessage}]" : "")}";
         }
         #endregion
     }
