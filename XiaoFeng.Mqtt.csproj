@@ -24,7 +24,7 @@
 		<PackageProjectUrl>https://www.eelf.cn</PackageProjectUrl>
 		<PackageIconUrl>http://nuget.fayelf.com/x.png</PackageIconUrl>
 		<PackageTags>XiaoFeng;FAYELF;MQTT;MQTT-SERVER;MQTT-CLIENT;</PackageTags>
-		<PackageReleaseNotes>优化服务端,客户端部分功能;优化服务端发送Disconnected时客户端解释包bug;优化WillFlag为0时连接包直接设备WillRetain为0;优化从网址中提取密码时赋值的bug;优化解包失败时丢弃包;</PackageReleaseNotes>
+		<PackageReleaseNotes>优化服务端,客户端部分功能;优化服务端发送Disconnected时客户端解释包bug;优化WillFlag为0时连接包直接设备WillRetain为0;优化从网址中提取密码时赋值的bug;优化解包失败时丢弃包;MqttClient优化服务端拒绝连接时不再自动连接;</PackageReleaseNotes>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<DelaySign>False</DelaySign>

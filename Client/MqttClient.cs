@@ -111,6 +111,10 @@ namespace XiaoFeng.Mqtt.Client
         /// PblishPacket数据包
         /// </summary>
         private PublishPacket PublishPacket { get; set; }
+        /// <summary>
+        /// 是否重连
+        /// </summary>
+        private Boolean IsAutoConnect { get; set; } = true;
         #endregion
 
         #region 事件
@@ -188,7 +192,7 @@ namespace XiaoFeng.Mqtt.Client
                     this.PingJob = null;
                 }
                 OnStoped?.Invoke(this);
-                if (this.ClientOptions.IsAutoConnect)
+                if (this.IsAutoConnect && this.ClientOptions.IsAutoConnect)
                 {
                     await Task.Delay(this.ClientOptions.ReConnectPeriod * 1000).ConfigureAwait(false);
                     await this.ConnectAsync().ConfigureAwait(false);
@@ -249,7 +253,6 @@ namespace XiaoFeng.Mqtt.Client
             else
                 throw new MqttException("Please configure the server endpoint.");
 
-            //var status = this.Client.Connect(this.EndPoint);
             if (status == SocketError.Success)
             {
                 this._Active = true;
@@ -450,9 +453,11 @@ namespace XiaoFeng.Mqtt.Client
             {
                 var disConnect = new DisconnectPacket(bytes);
                 OnMessageAsync(new ResultPacket(disConnect, resultType: ResultType.Success, $"Received {connAct.PacketType} from server ({disConnect}).")).ConfigureAwait(false).GetAwaiter();
+                this.ClientOptions.IsAutoConnect = false;
                 this.Stop();
                 return connAct;
             }
+            
             OnMessageAsync(new ResultPacket(connAct,resultType: ResultType.Success, $"Received {connAct.PacketType} from server ({connAct}).")).ConfigureAwait(false).GetAwaiter();
             if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED)
             {
@@ -460,8 +465,20 @@ namespace XiaoFeng.Mqtt.Client
                 if (connAct.ServerReference.IsNotNullOrEmpty())
                 {
                     await ServerMovedAsync(connAct.ServerReference).ConfigureAwait(false);
-                    return await Task.FromResult(connAct);
                 }
+                else
+                {
+                    if (connAct.ReasonCode == ReasonCode.UNSUPPORTED_PROTOCOL_VERSION || 
+                        connAct.ReasonCode == ReasonCode.BAD_USERNAME_OR_PASSWORD || 
+                        connAct.ReasonCode == ReasonCode.BANNED || 
+                        connAct.ReasonCode == ReasonCode.CLIENT_IDENTIFIER_NOT_VALID || 
+                        connAct.ReasonCode == ReasonCode.BAD_AUTHENTICATION_METHOND || 
+                        connAct.ReasonCode == ReasonCode.MALFORMED_PACKET || 
+                        connAct.ReasonCode == ReasonCode.UNSPECIFIED_ERROR)
+                        this.IsAutoConnect = false;
+                    this.Stop();
+                }
+                return await Task.FromResult(connAct);
             }
             else
             {
@@ -824,16 +841,13 @@ namespace XiaoFeng.Mqtt.Client
             {
                 var connAct = await this.ConnectAsync().ConfigureAwait(false);
                 if (connAct == null) return false;
-                if (connAct.PacketType == PacketType.DISCONNECT)
+                if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED ||connAct.PacketType == PacketType.DISCONNECT)
                 {
-                    return false;
-                }
-                else if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED)
-                {
+                    await OnMessageAsync(new ResultPacket(connAct, ResultType.Error, connAct.ReasonCode, connAct.ReasonString)).ConfigureAwait(false);
                     return false;
                 }
             }
-            OnMessageAsync(new ResultPacket(packet, ResultType.Success, $"Sending {packet.PacketType} to server ({packet}).")).ConfigureAwait(false).GetAwaiter();
+            await OnMessageAsync(new ResultPacket(packet, ResultType.Success, $"Sending {packet.PacketType} to server ({packet}).")).ConfigureAwait(false);
             MqttHelper.GetPacketSharding(packet.ToArray(), this.ClientOptions.MaximumPacketSize).Each(async bs =>
             {
                 await this.Client.SendAsync(bs, MessageType.Binary).ConfigureAwait(false);
@@ -927,7 +941,9 @@ namespace XiaoFeng.Mqtt.Client
                     this.NetUri.Host = line.Trim();
                     this.NetUri.Port = 1883;
                 }
+                this.IsAutoConnect = false;
                 this.Stop();
+                this.IsAutoConnect = true;
                 await this.ConnectAsync().ConfigureAwait(false);
                 break;
             }
