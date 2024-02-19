@@ -29,61 +29,42 @@ XiaoFeng.Mqtt generator with [XiaoFeng.Mqtt](https://github.com/zhuovi/XiaoFeng.
 .NET CLI
 
 ```
-$ dotnet add package XiaoFeng.Mqtt --version 1.0.2
+$ dotnet add package XiaoFeng.Mqtt --version 1.0.3
 ```
 
 Package Manager
 
 ```
-PM> Install-Package XiaoFeng.Mqtt --Version 1.0.2
+PM> Install-Package XiaoFeng.Mqtt --Version 1.0.3
 ```
 
 PackageReference
 
 ```
-<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.2" />
+<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.3" />
 ```
 
 Paket CLI
 
 ```
-> paket add XiaoFeng.Mqtt --version 1.0.2
+> paket add XiaoFeng.Mqtt --version 1.0.3
 ```
 
 Script & Interactive
 
 ```
-> #r "nuget: XiaoFeng.Mqtt, 1.0.2"
+> #r "nuget: XiaoFeng.Mqtt, 1.0.3"
 ```
 
 Cake
 
 ```
 // Install XiaoFeng.Mqtt as a Cake Addin
-#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.2
+#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.3
 
 // Install XiaoFeng.Mqtt as a Cake Tool
-#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.2
+#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.3
 ```
-
-# 版本更新
-
-## 2023-12-29   v 1.0.2
-
-1.优化服务端分发消息时的效率;
-
-2.优化解包失败时放弃当前包;
-
-3.优化MqttServerCredential中帐号或密码为空时的处理;
-
-## 2023-10-18   v 1.0.1
-
-增加粘包分包处理;
-
-## 2023-10-14   v 1.0.0
-
-全新功能的MQTT客户端服务端,支持3.0.0,3.1.0,5.0.0协议版本
-
 
 # XiaoFeng 类库包含库
 | 命名空间 | 所属类库 | 开源状态 | 说明 | 包含功能 |
@@ -112,6 +93,8 @@ Cake
 | FayElf.Plugins.WeChat | FayElf.Plugins.WeChat | :white_check_mark: | 微信公众号，小程序类库 | 微信公众号，小程序类库。 |
 | XiaoFeng.Mqtt | XiaoFeng.Mqtt | :white_check_mark: | MQTT协议 | XiaoFeng.Mqtt中间件,支持.NET框架、.NET内核和.NET标准库,一种非常方便操作的客户端工具。实现了MQTT客户端，MQTT服务端,同时支持TCP，WebSocket连接。支持协议版本3.0.0,3.1.0,5.0.0。 |
 | XiaoFeng.Modbus | XiaoFeng.Modbus | :white_check_mark: | MODBUS协议 | MODBUS协议,支持RTU、ASCII、TCP三种方式进行通信，自动离线保存服务端数据 |
+| XiaoFeng.DouYin | XiaoFeng.DouYin | :white_check_mark: | 抖音开放平台SDK | 抖音开放平台接口 |
+| XiaoFeng.KuaiShou | XiaoFeng.KuaiShou | :white_check_mark: | 快手开放平台SDK | 快手开放平台接口 |
 | XiaoFeng.Mvc.AdminWinDesk | XiaoFeng.Mvc.AdminWinDesk | :white_check_mark: | XiaoFeng.Mvc后台皮肤 | 模仿windows桌面后台皮肤 |
 | FayElf.Cube.Blog | FayElf.Cube.Blog | :white_check_mark: | XiaoFeng.Mvc开发的技术博客 | 使用低代码开发框架（XiaoFeng.Mvc）+Windows后台皮肤(XiaoFeng.Mvc.AdminWinDesk)，开发的一个博客平台。 |
 
@@ -132,13 +115,14 @@ mqtt://username:7092734@127.0.0.1:1883?ConnectionTimeout=3000&ReadTimeout=3000&W
 
 ```
 protocol    支持mqtt,mqtts,ws,wss,tcp
+
 username   用户名
 
 7092734	    密码
 
 127.0.0.1	主机
 
-6379		端口
+1883		端口
 
 ConnectionTimeout	连接超时时长
 
@@ -148,10 +132,13 @@ WriteTimeout		    发送数据超时时长
 
 最小的连接串是：mqtt://127.0.0.1
 
-实例化一个Mqtt对象
+## 实例化一个Mqtt对象
+
+## MQTT 客户端
+
+下边代码直接拷贝到程序中即可使用,修改一下服务器连接串或帐号密码等即可.
 
 ```csharp
-//客户端
 var client = new MqttClient("mqtt://admin:123456@127.0.0.1:1883");
 client.ClientOptions = new MqttClientOptions
 {
@@ -204,8 +191,12 @@ await client.ConnectAsync().ConfigureAwait(false);
 await client.SubscributeAsync("a/b").ConfigureAwait(false);
 //向指定的主题发送消息
 await client.PublishAsync("a/b", "Hello World").ConfigureAwait(false);
+```
+## MQTT 服务端
 
-//服务端
+下边代码直接拷贝到程序中即可使用,修改一下帐号密码及端口
+
+```csharp
 var server = new MqttServer(new IPEndPoint(IPAddress.Any, 1883));
 //添加服务器凭证
 server.AddCredential("admin", "123456", "");
@@ -269,9 +260,41 @@ static void w(string msg) => Console.WriteLine($"{DateTime.Now.ToTimeStamp()}: {
 
 
 
-
 # 作者介绍
 
 * 网址 : https://www.eelf.cn
 * QQ : 7092734
 * EMail : jacky@eelf.cn
+
+
+# 版本更新
+
+## 2024-02-19   v 1.0.3
+
+1.优化服务端,客户端部分功能;
+
+2.优化服务端发送Disconnected时客户端解释包bug;
+
+3.优化WillFlag为0时连接包直接设备WillRetain为0;
+
+4.优化从网址中提取密码时赋值的bug;
+
+5.优化解包失败时丢弃包;
+
+6.MqttClient优化服务端拒绝连接时不再自动连接;
+
+## 2023-12-29   v 1.0.2
+
+1.优化服务端分发消息时的效率;
+
+2.优化解包失败时放弃当前包;
+
+3.优化MqttServerCredential中帐号或密码为空时的处理;
+
+## 2023-10-18   v 1.0.1
+
+增加粘包分包处理;
+
+## 2023-10-14   v 1.0.0
+
+全新功能的MQTT客户端服务端,支持3.0.0,3.1.0,5.0.0协议版本
