@@ -191,6 +191,9 @@ await client.ConnectAsync().ConfigureAwait(false);
 await client.SubscributeAsync("a/b").ConfigureAwait(false);
 //向指定的主题发送消息
 await client.PublishAsync("a/b", "Hello World").ConfigureAwait(false);
+
+static void w(string msg) => Console.WriteLine($"{DateTime.Now.ToTimeStamp()}: {msg}");
+
 ```
 ## MQTT 服务端
 
