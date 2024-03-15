@@ -193,7 +193,6 @@ await client.SubscributeAsync("a/b").ConfigureAwait(false);
 await client.PublishAsync("a/b", "Hello World").ConfigureAwait(false);
 
 static void w(string msg) => Console.WriteLine($"{DateTime.Now.ToTimeStamp()}: {msg}");
-
 ```
 ## MQTT 服务端
 

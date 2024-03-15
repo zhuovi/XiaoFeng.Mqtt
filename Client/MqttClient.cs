@@ -877,7 +877,7 @@ namespace XiaoFeng.Mqtt.Client
         /// </summary>
         public override void Dispose()
         {
-            base.Dispose();
+            this.Dispose(true);
         }
         /// <summary>
         /// 注销
@@ -885,10 +885,17 @@ namespace XiaoFeng.Mqtt.Client
         /// <param name="disposing">标识</param>
         protected override void Dispose(bool disposing)
         {
-            this.Stop();
-            this.TopicFilters.Clear();
-            this.TopicFilters = null;
-            base.Dispose(disposing);
+            base.Dispose(disposing, () =>
+            {
+                this.Stop();
+                if (this.Client != null)
+                {
+                    this.Client.Dispose();
+                    this.Client = null;
+                }
+                this.TopicFilters.Clear();
+                this.TopicFilters = null;
+            });
             GC.Collect();
         }
         /// <summary>
@@ -896,7 +903,7 @@ namespace XiaoFeng.Mqtt.Client
         /// </summary>
         ~MqttClient()
         {
-            this.Dispose(true);
+            this.Dispose(false);
         }
         #endregion
 

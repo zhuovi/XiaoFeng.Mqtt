@@ -1630,31 +1630,45 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 释放
         /// </summary>
+        public override void Dispose()
+        {
+            this.Dispose(true);
+        }
+        /// <summary>
+        /// 释放
+        /// </summary>
         /// <param name="disposing">标识</param>
         protected override void Dispose(bool disposing)
         {
-            this.Stop();
-            if (this.MqttServerCredentials != null)
+            base.Dispose(disposing, () =>
             {
-                this.MqttServerCredentials.Clear();
-                this.MqttServerCredentials = null;
-            }
-            if (this.MqttServerTopicMessages != null)
-            {
-                this.MqttServerTopicMessages.Clear();
-                this.MqttServerTopicMessages = null;
-            }
-            if(this.MqttServerTopicClients != null)
-            {
-                this.MqttServerTopicClients.Clear();
-                this.MqttServerTopicClients = null;
-            }
-            if (this.CleanWorker != null)
-            {
-                this.CleanWorker.Stop();
-                this.CleanWorker = null;
-            }
-            base.Dispose(disposing);
+                this.Stop();
+                if (this.Server != null)
+                {
+                    this.Server.Dispose();
+                    this.Server = null;
+                }
+                if (this.MqttServerCredentials != null)
+                {
+                    this.MqttServerCredentials.Clear();
+                    this.MqttServerCredentials = null;
+                }
+                if (this.MqttServerTopicMessages != null)
+                {
+                    this.MqttServerTopicMessages.Clear();
+                    this.MqttServerTopicMessages = null;
+                }
+                if (this.MqttServerTopicClients != null)
+                {
+                    this.MqttServerTopicClients.Clear();
+                    this.MqttServerTopicClients = null;
+                }
+                if (this.CleanWorker != null)
+                {
+                    this.CleanWorker.Stop();
+                    this.CleanWorker = null;
+                }
+            });
         }
         /// <summary>
         /// 析构器

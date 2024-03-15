@@ -35,7 +35,5 @@
 		<None Include="README.md" Pack="true" PackagePath="\" />
 		<None Include="LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\XiaoFeng\XiaoFeng.csproj" />
-	</ItemGroup>
+	<Import Project="E:/Work/XiaoFeng.targets"/>
 </Project>
