@@ -20,6 +20,13 @@ Nuget：XiaoFeng.Mqtt
 
 XiaoFeng.Mqtt中间件,支持.NET框架、.NET内核和.NET标准库,一种非常方便操作的客户端工具。实现了MQTT客户端，MQTT服务端,同时支持TCP，WebSocket连接。支持协议版本3.0.0,3.1.0,5.0.0
 
+## 感谢支持
+
+| 名称 | LOGO |
+| :----:| :----: |
+| JetBrains | [![JetBrains](https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg?_ga=2.18748729.1472960975.1710982503-1993260277.1703834590&_gl=1*1o75dn2*_ga*MTk5MzI2MDI3Ny4xNzAzODM0NTkw*_ga_9J976DJZ68*MTcxMDk4MjUwMi43LjEuMTcxMDk4NDUwOC4zOC4wLjA.)](https://jb.gg/OpenSourceSupport) |
+| Visual Studio | [![Visual Studio](https://visualstudio.microsoft.com/wp-content/uploads/2021/10/Product-Icon.svg)](https://visualstudio.microsoft.com/) |
+
 ## XiaoFeng.Mqtt
 
 XiaoFeng.Mqtt generator with [XiaoFeng.Mqtt](https://github.com/zhuovi/XiaoFeng.Mqtt).
@@ -29,41 +36,41 @@ XiaoFeng.Mqtt generator with [XiaoFeng.Mqtt](https://github.com/zhuovi/XiaoFeng.
 .NET CLI
 
 ```
-$ dotnet add package XiaoFeng.Mqtt --version 1.0.3
+$ dotnet add package XiaoFeng.Mqtt --version 1.0.4
 ```
 
 Package Manager
 
 ```
-PM> Install-Package XiaoFeng.Mqtt --Version 1.0.3
+PM> Install-Package XiaoFeng.Mqtt --Version 1.0.4
 ```
 
 PackageReference
 
 ```
-<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.3" />
+<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.4" />
 ```
 
 Paket CLI
 
 ```
-> paket add XiaoFeng.Mqtt --version 1.0.3
+> paket add XiaoFeng.Mqtt --version 1.0.4
 ```
 
 Script & Interactive
 
 ```
-> #r "nuget: XiaoFeng.Mqtt, 1.0.3"
+> #r "nuget: XiaoFeng.Mqtt, 1.0.4"
 ```
 
 Cake
 
 ```
 // Install XiaoFeng.Mqtt as a Cake Addin
-#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.3
+#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.4
 
 // Install XiaoFeng.Mqtt as a Cake Tool
-#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.3
+#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.4
 ```
 
 # XiaoFeng 类库包含库
@@ -97,6 +104,7 @@ Cake
 | XiaoFeng.KuaiShou | XiaoFeng.KuaiShou | :white_check_mark: | 快手开放平台SDK | 快手开放平台接口 |
 | XiaoFeng.Mvc.AdminWinDesk | XiaoFeng.Mvc.AdminWinDesk | :white_check_mark: | XiaoFeng.Mvc后台皮肤 | 模仿windows桌面后台皮肤 |
 | FayElf.Cube.Blog | FayElf.Cube.Blog | :white_check_mark: | XiaoFeng.Mvc开发的技术博客 | 使用低代码开发框架（XiaoFeng.Mvc）+Windows后台皮肤(XiaoFeng.Mvc.AdminWinDesk)，开发的一个博客平台。 |
+| XiaoFeng.Ofd | XiaoFeng.Ofd | :white_check_mark: | OFD读写库 | OFD 读写处理库，支持文档的生成、文档编辑、文档批注、数字签名、文档合并、文档拆分、文档转换至PDF、文档查询等功能。 |
 
 
 # XiaoFeng.Mqtt

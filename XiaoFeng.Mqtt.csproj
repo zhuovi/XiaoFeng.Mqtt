@@ -8,7 +8,7 @@
 		<Copyright>CopyRight @ 2008-2024 魔法精灵(www.eelf.cn) QQ:7092734 Email:jacky@eelf.cn</Copyright>
 		<Company>魔法精灵</Company>
 		<VersionPrefix>1.0</VersionPrefix>
-		<VersionSuffix>3</VersionSuffix>
+		<VersionSuffix>4</VersionSuffix>
 		<Version>$(VersionPrefix).$(VersionSuffix)</Version>
 		<FileVersion>$(Version)</FileVersion>
 		<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
@@ -24,7 +24,7 @@
 		<PackageProjectUrl>https://www.eelf.cn</PackageProjectUrl>
 		<PackageIconUrl>http://nuget.fayelf.com/x.png</PackageIconUrl>
 		<PackageTags>XiaoFeng;FAYELF;MQTT;MQTT-SERVER;MQTT-CLIENT;</PackageTags>
-		<PackageReleaseNotes>优化服务端,客户端部分功能;优化服务端发送Disconnected时客户端解释包bug;优化WillFlag为0时连接包直接设备WillRetain为0;优化从网址中提取密码时赋值的bug;优化解包失败时丢弃包;MqttClient优化服务端拒绝连接时不再自动连接;</PackageReleaseNotes>
+		<PackageReleaseNotes>优化MqttClient，在断网或连接失败的情况下，优化连接网络;</PackageReleaseNotes>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<DelaySign>False</DelaySign>
@@ -35,8 +35,8 @@
 		<None Include="README.md" Pack="true" PackagePath="\" />
 		<None Include="LICENSE" Pack="true" PackagePath="\" />
 	</ItemGroup>
-	<ItemGroup>
+	<!--<ItemGroup>
 	  <PackageReference Include="XiaoFeng" Version="5.0.4" />
-	</ItemGroup>
-	<!--<Import Project="E:/Work/XiaoFeng.targets"/>-->
+	</ItemGroup>-->
+	<Import Project="E:/Work/XiaoFeng.targets"/>
 </Project>

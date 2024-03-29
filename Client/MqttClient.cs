@@ -115,6 +115,10 @@ namespace XiaoFeng.Mqtt.Client
         /// 是否重连
         /// </summary>
         private Boolean IsAutoConnect { get; set; } = true;
+        /// <summary>
+        /// 异步锁
+        /// </summary>
+        readonly AsyncLock MqttClientAsyncLock = new AsyncLock();
         #endregion
 
         #region 事件
@@ -434,10 +438,13 @@ namespace XiaoFeng.Mqtt.Client
         /// <returns></returns>
         public async Task<ConnectActPacket> ConnectAsync()
         {
-            if (!this.Active)
+            using (await MqttClientAsyncLock.EnterAsync().ConfigureAwait(false))
             {
-                var init = await this.InitAsync().ConfigureAwait(false);
-                if (!init) return null;
+                if (!this.Active)
+                {
+                    var init = await this.InitAsync().ConfigureAwait(false);
+                    if (!init) return null;
+                }
             }
             var connPacket = this.ClientOptions as ConnectPacket;
             OnMessageAsync(new ResultPacket(connPacket, ResultType.Success, $"Sending {connPacket.PacketType} to server ({connPacket}).")).ConfigureAwait(false).GetAwaiter();
@@ -537,6 +544,7 @@ namespace XiaoFeng.Mqtt.Client
         /// </summary>
         private void PingWorker()
         {
+            if (this.ClientOptions.KeepAlive < 5) this.ClientOptions.KeepAlive = 5;
             this.PingJob = new Job().SetName("EELF_MQTT_Worker").Interval((int)this.ClientOptions.KeepAlive * 1000, async job =>
             {
                 await this.PingAsync().ConfigureAwait(false);
@@ -836,17 +844,9 @@ namespace XiaoFeng.Mqtt.Client
         private async Task<bool> SendAsync(MqttPacket packet)
         {
             packet.ProtocolVersion = this.ClientOptions.ProtocolVersion;
-
-            if (!this.Connected || this.Client?.Connected == false)
-            {
-                var connAct = await this.ConnectAsync().ConfigureAwait(false);
-                if (connAct == null) return false;
-                if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED ||connAct.PacketType == PacketType.DISCONNECT)
-                {
-                    await OnMessageAsync(new ResultPacket(connAct, ResultType.Error, connAct.ReasonCode, connAct.ReasonString)).ConfigureAwait(false);
-                    return false;
-                }
-            }
+            //如果没有连接就返回
+            if (!this.Active && (!this.Connected || this.Client?.Connected == false)) return await Task.FromResult(false);
+            
             await OnMessageAsync(new ResultPacket(packet, ResultType.Success, $"Sending {packet.PacketType} to server ({packet}).")).ConfigureAwait(false);
             MqttHelper.GetPacketSharding(packet.ToArray(), this.ClientOptions.MaximumPacketSize).Each(async bs =>
             {
