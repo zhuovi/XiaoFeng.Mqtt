@@ -313,6 +313,7 @@ namespace XiaoFeng.Mqtt.Server
             {
                 case PacketType.CONNECT://连接包
                     var connPacket = new ConnectPacket(bytes, ProtocolVersion);
+
                     OnMessageAsync(client, new ResultPacket(connPacket, ResultType.Success, $"New client connected from {client.EndPoint} as {connPacket.ClientId} ({connPacket}).")).ConfigureAwait(false).GetAwaiter();
                     var connActResult = await this.ConnActAsync(client, connPacket).ConfigureAwait(false);
                     if (connActResult.ResultType == ResultType.Error)

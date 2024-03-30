@@ -447,6 +447,7 @@ namespace XiaoFeng.Mqtt.Client
                 }
             }
             var connPacket = this.ClientOptions as ConnectPacket;
+            connPacket.PacketType = PacketType.CONNECT;
             OnMessageAsync(new ResultPacket(connPacket, ResultType.Success, $"Sending {connPacket.PacketType} to server ({connPacket}).")).ConfigureAwait(false).GetAwaiter();
             await this.Client.SendAsync(connPacket.ToArray(), MessageType.Binary).ConfigureAwait(false);
             var bytes = await this.Client.ReceviceMessageAsync().ConfigureAwait(false);

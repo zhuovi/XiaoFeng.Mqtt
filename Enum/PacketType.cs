@@ -44,7 +44,7 @@ namespace XiaoFeng.Mqtt
         /// <summary>
         /// 保留
         /// </summary>
-        //RESERVED = 0,
+        RESERVED = 0,
         /// <summary>
         /// 客户端请求连接服务端
         /// </summary>

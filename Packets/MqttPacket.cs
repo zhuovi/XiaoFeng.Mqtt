@@ -138,6 +138,7 @@ namespace XiaoFeng.Mqtt.Packets
         {
             this.ErrorCode = reasonCode;
             this.ErrorMessage = errorMessage.IsNullOrEmpty() ? reasonCode.GetDescription() : errorMessage;
+            this.PacketStatus = PacketStatus.Error;
         }
         /// <summary>
         /// 读取剩下字节
@@ -151,6 +152,9 @@ namespace XiaoFeng.Mqtt.Packets
         public virtual byte[] ToArray()
         {
             var ms = new MqttBufferWriter();
+
+            this.PacketType = GetPacketType();
+            
             ms.WriteByte(this.GetFlags());
             var Payload = new MqttBufferWriter();
             if (!this.WriteBuffer(Payload)) return Array.Empty<byte>();
@@ -228,6 +232,29 @@ namespace XiaoFeng.Mqtt.Packets
             if (flags > 0)
                 fixedHeader |= flags;
             return (byte)fixedHeader;
+        }
+        /// <summary>
+        /// 获取包类型
+        /// </summary>
+        /// <returns></returns>
+        PacketType GetPacketType()
+        {
+            if (this is ConnectPacket) return PacketType.CONNECT;
+            if (this is ConnectActPacket) return PacketType.CONNACK;
+            if(this is DisconnectPacket)return PacketType.DISCONNECT;
+            if (this is AuthPacket) return PacketType.AUTH;
+            if (this is PingReqPacket) return PacketType.PINGREQ;
+            if (this is PingRespPacket) return PacketType.PINGRESP;
+            if (this is PubAckPacket) return PacketType.PUBACK;
+            if (this is PubCompPacket) return PacketType.PUBCOMP;
+            if(this is PubRecPacket) return PacketType.PUBREC;
+            if (this is PubRelPacket) return PacketType.PUBREL;
+            if (this is PublishPacket) return PacketType.PUBLISH;
+            if (this is SubscribePacket) return PacketType.SUBSCRIBE;
+            if (this is SubAckPacket) return PacketType.SUBACK;
+            if(this is UnsubscribePacket) return PacketType.UNSUBSCRIBE;
+            if (this is UnsubAckPacket) return PacketType.UNSUBACK;
+            return 0;
         }
         #endregion
     }
