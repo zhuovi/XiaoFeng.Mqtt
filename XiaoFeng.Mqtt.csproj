@@ -24,12 +24,13 @@
 		<PackageProjectUrl>https://www.eelf.cn</PackageProjectUrl>
 		<PackageIconUrl>http://nuget.fayelf.com/x.png</PackageIconUrl>
 		<PackageTags>XiaoFeng;FAYELF;MQTT;MQTT-SERVER;MQTT-CLIENT;</PackageTags>
-		<PackageReleaseNotes>优化MqttClient，在断网或连接失败的情况下，优化连接网络;优化输出包字节时，优化包类型不匹配的问题;</PackageReleaseNotes>
+		<PackageReleaseNotes>优化MqttClient，在断网或连接失败的情况下，优化连接网络;优化输出包字节时，优化包类型不匹配的问题;优化自动连接;</PackageReleaseNotes>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<DelaySign>False</DelaySign>
 		<IsPackable>true</IsPackable>
 		<Title>XiaoFeng.Mqtt</Title>
+		<XiaoFeng>debug</XiaoFeng>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />

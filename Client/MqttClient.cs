@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using XiaoFeng.Mqtt.Internal;
 using XiaoFeng.Mqtt.Packets;
@@ -246,6 +247,8 @@ namespace XiaoFeng.Mqtt.Client
                 this.Client = this.GetClient();
             }
             SocketError status;
+            await Slim.WaitAsync().ConfigureAwait(false);
+            if (this.Active) return await Task.FromResult(true);
             if (Client is IWebSocketClient ws)
             {
                 var netUri = this.NetUri;
@@ -253,19 +256,20 @@ namespace XiaoFeng.Mqtt.Client
                 status = ws.Connect(new Uri(netUri.ToString()));
             }
             else if (Client is ISocketClient socket)
-                status = socket.Connect(this.NetUri.Host, this.NetUri.Port);
+                status = await socket.ConnectAsync(this.NetUri.Host, this.NetUri.Port).ConfigureAwait(false);
             else
                 throw new MqttException("Please configure the server endpoint.");
 
             if (status == SocketError.Success)
             {
                 this._Active = true;
+                Slim.Release();
                 this.Client.StartEventHandler();
                 return await Task.FromResult(true);
             }
             else
             {
-                this.OnError?.Invoke(this, "Connect failed.");
+                this.OnError?.Invoke(this, $"Connect failed.{status}");
                 this.Stop();
                 return await Task.FromResult(false);
             }
@@ -433,6 +437,10 @@ namespace XiaoFeng.Mqtt.Client
 
         #region 连接
         /// <summary>
+        /// 线程锁
+        /// </summary>
+        private SemaphoreSlim Slim { get; set; } = new SemaphoreSlim(1, 1);
+        /// <summary>
         /// 连接服务端
         /// </summary>
         /// <returns></returns>
@@ -465,8 +473,8 @@ namespace XiaoFeng.Mqtt.Client
                 this.Stop();
                 return connAct;
             }
-            
-            OnMessageAsync(new ResultPacket(connAct,resultType: ResultType.Success, $"Received {connAct.PacketType} from server ({connAct}).")).ConfigureAwait(false).GetAwaiter();
+
+            OnMessageAsync(new ResultPacket(connAct, resultType: ResultType.Success, $"Received {connAct.PacketType} from server ({connAct}).")).ConfigureAwait(false).GetAwaiter();
             if (connAct.ReturnCode != ConnectReturnCode.ACCEPTED)
             {
                 OnError?.Invoke(this, $"Connect failed: [{connAct.ReasonCode}] [{connAct.ReasonString}]");
