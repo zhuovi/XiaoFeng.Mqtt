@@ -1420,34 +1420,34 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 添加凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         public void AddCredential(string userName, string password) => this.AddCredential(userName, password, "");
         /// <summary>
         /// 添加凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         public void AddCredential(string userName, string password, string allowClientIp) => this.AddCredential(userName, password, allowClientIp.IsNullOrEmpty() ? null : new List<string> { allowClientIp });
         /// <summary>
         /// 添加凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         public void AddCredential(string userName, string password, IList<string> allowClientIp) => this.AddCredential(MqttServerCredential.Create(userName, password, allowClientIp));
         /// <summary>
         /// 添加凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         public void AddCredential(string userName, string password, params string[] allowClientIp) => this.AddCredential(userName, password, allowClientIp);
         /// <summary>
-        /// 设置当前帐号允许IP
+        /// 设置当前账号允许IP
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="allowClientIp">允许IP</param>
         public void AddCredentialAllowClientIp(string userName, string allowClientIp)
         {
@@ -1463,7 +1463,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 移除凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <returns></returns>
         public bool RemoveCredential(string userName)
         {

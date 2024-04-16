@@ -25,26 +25,26 @@ namespace XiaoFeng.Mqtt.Server
         /// </summary>
         public MqttServerCredential() { }
         /// <summary>
-        /// 设置帐号密码
+        /// 设置账号密码
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         public MqttServerCredential(string userName, string password) : this(userName, password, new List<string>())
         {
         }
         /// <summary>
-        /// 设置帐号密码
+        /// 设置账号密码
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         public MqttServerCredential(string userName, string password, string allowClientIp) : this(userName, password, new List<string>() { allowClientIp })
         {
         }
         /// <summary>
-        /// 设置帐号密码
+        /// 设置账号密码
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         public MqttServerCredential(string userName, string password, IList<string> allowClientIp)
@@ -58,7 +58,7 @@ namespace XiaoFeng.Mqtt.Server
 
         #region 属性
         /// <summary>
-        /// 帐号
+        /// 账号
         /// </summary>
         public string UserName { get; set; }
         /// <summary>
@@ -75,7 +75,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 创建服务端认证信息
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         /// <returns></returns>
@@ -86,7 +86,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 创建服务端认证信息
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <returns></returns>
         public static IMqttServerCredential Create(string userName, string password)
@@ -104,7 +104,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 创建服务端认证信息
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         /// <returns></returns>

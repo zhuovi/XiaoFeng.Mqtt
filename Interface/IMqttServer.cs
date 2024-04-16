@@ -176,40 +176,40 @@ namespace XiaoFeng.Mqtt
         /// <summary>
         /// 添加凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         void AddCredential(string userName, string password);
         /// <summary>
         /// 添加凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         void AddCredential(string userName, string password, string allowClientIp);
         /// <summary>
         /// 添加凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
         void AddCredential(string userName, string password, IList<string> allowClientIp);
         /// <summary>
         /// 添加凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="password">密码</param>
         /// <param name="allowClientIp">允许IP</param>
-        void AddCredential(string userName, string password, params string[] allClientIp);
+        void AddCredential(string userName, string password, params string[] allowClientIp);
         /// <summary>
-        /// 设置当前帐号允许IP
+        /// 设置当前账号允许IP
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <param name="allowClientIp">允许IP</param>
         void AddCredentialAllowClientIp(string userName, string allowClientIp);
         /// <summary>
         /// 移除凭证
         /// </summary>
-        /// <param name="userName">帐号</param>
+        /// <param name="userName">账号</param>
         /// <returns></returns>
         bool RemoveCredential(string userName);
         /// <summary>

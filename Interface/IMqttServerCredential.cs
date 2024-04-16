@@ -21,7 +21,7 @@ namespace XiaoFeng.Mqtt
     {
         #region 属性
         /// <summary>
-        /// 帐号
+        /// 账号
         /// </summary>
         string UserName { get; set; }
         /// <summary>

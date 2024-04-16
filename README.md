@@ -144,7 +144,7 @@ WriteTimeout		    发送数据超时时长
 
 ## MQTT 客户端
 
-下边代码直接拷贝到程序中即可使用,修改一下服务器连接串或帐号密码等即可.
+下边代码直接拷贝到程序中即可使用,修改一下服务器连接串或账号密码等即可.
 
 ```csharp
 var client = new MqttClient("mqtt://admin:123456@127.0.0.1:1883");
@@ -204,7 +204,7 @@ static void w(string msg) => Console.WriteLine($"{DateTime.Now.ToTimeStamp()}: {
 ```
 ## MQTT 服务端
 
-下边代码直接拷贝到程序中即可使用,修改一下帐号密码及端口
+下边代码直接拷贝到程序中即可使用,修改一下账号密码及端口
 
 ```csharp
 var server = new MqttServer(new IPEndPoint(IPAddress.Any, 1883));
@@ -299,7 +299,7 @@ static void w(string msg) => Console.WriteLine($"{DateTime.Now.ToTimeStamp()}: {
 
 2.优化解包失败时放弃当前包;
 
-3.优化MqttServerCredential中帐号或密码为空时的处理;
+3.优化MqttServerCredential中账号或密码为空时的处理;
 
 ## 2023-10-18   v 1.0.1
 
