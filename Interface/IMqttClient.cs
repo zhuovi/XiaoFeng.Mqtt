@@ -109,7 +109,6 @@ namespace XiaoFeng.Mqtt
         /// 订阅
         /// </summary>
         /// <param name="topics">主题</param>
-        /// <param name="qos">服务质量等级</param>
         /// <returns></returns>
         Task<IList<SubscribeResult>> SubscributeAsync(ICollection<KeyValuePair<string, QualityOfServiceLevel>> topics);
         /// <summary>
@@ -135,7 +134,6 @@ namespace XiaoFeng.Mqtt
         /// 订阅
         /// </summary>
         /// <param name="topics">主题</param>
-        /// <param name="qos">服务质量等级</param>
         /// <returns></returns>
         Task<IList<UnsubscribeResult>> UnsubscributeAsync(ICollection<KeyValuePair<string, QualityOfServiceLevel>> topics);
         /// <summary>

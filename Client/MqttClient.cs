@@ -77,6 +77,10 @@ namespace XiaoFeng.Mqtt.Client
         /// </summary>
         private NetUri NetUri { get; set; }
         /// <summary>
+        /// 指令
+        /// </summary>
+        private CancellationTokenSource Token { get; set; }
+        /// <summary>
         /// 客户端配置
         /// </summary>
         public MqttClientOptions ClientOptions { get; set; }
@@ -590,8 +594,7 @@ namespace XiaoFeng.Mqtt.Client
         /// 订阅
         /// </summary>
         /// <param name="topics">主题</param>
-        /// <param name="qos">服务质量等级</param>
-        /// <returns></returns>
+         /// <returns></returns>
         public async Task<IList<SubscribeResult>> SubscributeAsync(ICollection<KeyValuePair<string, QualityOfServiceLevel>> topics)
         {
             var list = from t in topics select new TopicFilter(t.Key, t.Value);
@@ -703,7 +706,6 @@ namespace XiaoFeng.Mqtt.Client
         /// 订阅
         /// </summary>
         /// <param name="topics">主题</param>
-        /// <param name="qos">服务质量等级</param>
         /// <returns></returns>
         public async Task<IList<UnsubscribeResult>> UnsubscributeAsync(ICollection<KeyValuePair<string, QualityOfServiceLevel>> topics)
         {
