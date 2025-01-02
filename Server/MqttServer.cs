@@ -529,7 +529,7 @@ namespace XiaoFeng.Mqtt.Server
                 }
                 else if (this.SameClientIdMode == SameClientIdMode.DisconnectExisting)
                 {
-                    DisconnectAsync(packet.ClientId, new DisconnectPacket
+                    DisconnectAsync(packet.ClientId,client.EndPoint, new DisconnectPacket
                     {
                         ReasonCode = ReasonCode.SESSION_TAKEN_OVER,
                         ReasonString = "Connection failed: Your session client ID is occupied by another client"
@@ -1652,13 +1652,14 @@ namespace XiaoFeng.Mqtt.Server
         /// 断开已连接的指定clientId
         /// </summary>
         /// <param name="clientId">客户端Id</param>
+        /// <param name="endPoint">客户端IP</param>
         /// <param name="packet">断开包</param>
         /// <returns></returns>
-        private async Task<bool> DisconnectAsync(string clientId, DisconnectPacket packet)
+        private async Task<bool> DisconnectAsync(string clientId, IPEndPoint endPoint, DisconnectPacket packet)
         {
             if (clientId.IsNullOrEmpty()) return await Task.FromResult(false);
 
-            var client = this.Server.Clients.Where(a => a.GetClientData()?.ConnectPacket.ClientId == clientId).First();
+            var client = this.Server.Clients.Where(a => a.GetClientData()?.ConnectPacket.ClientId == clientId && a.EndPoint.ToString() != EndPoint.ToString()).First();
             if (client == null) return await Task.FromResult(false);
 
             await DisconnectAsync(client, packet);

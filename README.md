@@ -36,41 +36,41 @@ XiaoFeng.Mqtt generator with [XiaoFeng.Mqtt](https://github.com/zhuovi/XiaoFeng.
 .NET CLI
 
 ```
-$ dotnet add package XiaoFeng.Mqtt --version 1.0.4
+$ dotnet add package XiaoFeng.Mqtt --version 1.0.5
 ```
 
 Package Manager
 
 ```
-PM> Install-Package XiaoFeng.Mqtt --Version 1.0.4
+PM> Install-Package XiaoFeng.Mqtt --Version 1.0.5
 ```
 
 PackageReference
 
 ```
-<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.4" />
+<PackageReference Include="XiaoFeng.Mqtt" Version="1.0.5" />
 ```
 
 Paket CLI
 
 ```
-> paket add XiaoFeng.Mqtt --version 1.0.4
+> paket add XiaoFeng.Mqtt --version 1.0.5
 ```
 
 Script & Interactive
 
 ```
-> #r "nuget: XiaoFeng.Mqtt, 1.0.4"
+> #r "nuget: XiaoFeng.Mqtt, 1.0.5"
 ```
 
 Cake
 
 ```
 // Install XiaoFeng.Mqtt as a Cake Addin
-#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.4
+#addin nuget:?package=XiaoFeng.Mqtt&version=1.0.5
 
 // Install XiaoFeng.Mqtt as a Cake Tool
-#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.4
+#tool nuget:?package=XiaoFeng.Mqtt&version=1.0.5
 ```
 
 # XiaoFeng 类库包含库
@@ -279,6 +279,10 @@ static void w(string msg) => Console.WriteLine($"{DateTime.Now.ToTimeStamp()}: {
 
 
 # 版本更新
+
+## 2025-01-02   v 1.0.5
+
+1.修复 SameClientIdMode 断开时的bug;
 
 ## 2025-01-02   v 1.0.4
 
