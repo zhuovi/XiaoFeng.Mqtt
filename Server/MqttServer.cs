@@ -8,7 +8,6 @@ using XiaoFeng.Mqtt.Packets;
 using XiaoFeng.Mqtt.Internal;
 using System.Collections.Concurrent;
 using XiaoFeng.Threading;
-using XiaoFeng.FTP;
 
 /****************************************************************
 *  Copyright © (2023) www.eelf.cn All Rights Reserved.          *
@@ -69,6 +68,10 @@ namespace XiaoFeng.Mqtt.Server
         #endregion
 
         #region 属性
+        /// <summary>
+        /// 客户端Id 存在处理模式
+        /// </summary>
+        public SameClientIdMode SameClientIdMode { get; set; } = SameClientIdMode.Refused;
         /// <summary>
         /// 终节点
         /// </summary>
@@ -446,7 +449,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <returns></returns>
         public bool Contains(string clientId)
         {
-            return this.Server.Clients != null && this.Server.Clients.Count > 0 && this.Server.Clients.LongCount(c => c.GetClientData().ConnectPacket != null && c.GetClientData().ConnectPacket.ClientId == clientId) > 0;
+            return this.Server.Clients != null && this.Server.Clients.Count > 0 && this.Server.Clients.LongCount(c => c.Connected && c.GetClientData().ConnectPacket != null && c.GetClientData().ConnectPacket.ClientId == clientId) > 0;
         }
         #endregion
 
@@ -507,17 +510,35 @@ namespace XiaoFeng.Mqtt.Server
 
             if (packet.ClientId.IsNullOrEmpty())
             {
+                //优化客户端未提供client id 则服务端提供一个
+                packet.ClientId = AckPacket.AssignedClientIdentifier = "ELF_MQTT_" + RandomHelper.GetRandomString(8);
+                /*
                 AckPacket.ReasonCode = result.ReasonCode = ReasonCode.CLIENT_IDENTIFIER_NOT_VALID;
                 AckPacket.ReasonString = result.Message = $"Connection Refused: ClientId is null or empty";
                 await SendAsync(AckPacket, client).ConfigureAwait(false);
-                return result;
+                return result;*/
             }
             if (this.Contains(packet.ClientId))
             {
-                AckPacket.ReasonCode = result.ReasonCode = ReasonCode.CLIENT_IDENTIFIER_NOT_VALID;
-                AckPacket.ReasonString = result.Message = $"Connection Refused: ClientId [{packet.ClientId}] is already connected";
-                await SendAsync(AckPacket, client).ConfigureAwait(false);
-                return result;
+                if (this.SameClientIdMode == SameClientIdMode.Refused)
+                {
+                    AckPacket.ReasonCode = result.ReasonCode = ReasonCode.CLIENT_IDENTIFIER_NOT_VALID;
+                    AckPacket.ReasonString = result.Message = $"Connection Refused: ClientId [{packet.ClientId}] is already connected";
+                    await SendAsync(AckPacket, client).ConfigureAwait(false);
+                    return result;
+                }
+                else if (this.SameClientIdMode == SameClientIdMode.DisconnectExisting)
+                {
+                    DisconnectAsync(packet.ClientId, new DisconnectPacket
+                    {
+                        ReasonCode = ReasonCode.SESSION_TAKEN_OVER,
+                        ReasonString = "Connection failed: Your session client ID is occupied by another client"
+                    }).ConfigureAwait(false).GetAwaiter();
+                }
+                else
+                {
+                    packet.ClientId = AckPacket.AssignedClientIdentifier = "ELF_MQTT_" + RandomHelper.GetRandomString(8);
+                }
             }
 
             AckPacket.AssignedClientIdentifier = packet.ClientId;
@@ -1366,7 +1387,7 @@ namespace XiaoFeng.Mqtt.Server
                     if (packet is DisconnectPacket)
                     {
                         await client.SendAsync(bytes, MessageType.Binary).ConfigureAwait(false);
-                        this.StopClientAsync(client,0).ConfigureAwait(false).GetAwaiter();
+                        this.StopClientAsync(client, 0).ConfigureAwait(false).GetAwaiter();
                         return true;
                     }
                     else
@@ -1600,7 +1621,6 @@ namespace XiaoFeng.Mqtt.Server
         /// <returns></returns>
         private async Task CleanKeepAliveClientAsync()
         {
-            return;
             if (this.CleanWorker == null)
             {
                 if (this.ServerOptions.ServerKeepAlive == 0)
@@ -1624,6 +1644,25 @@ namespace XiaoFeng.Mqtt.Server
                 this.CleanWorker.Start();
             }
             await Task.CompletedTask;
+        }
+        #endregion
+
+        #region 断开已连接的指定clientId
+        /// <summary>
+        /// 断开已连接的指定clientId
+        /// </summary>
+        /// <param name="clientId">客户端Id</param>
+        /// <param name="packet">断开包</param>
+        /// <returns></returns>
+        private async Task<bool> DisconnectAsync(string clientId, DisconnectPacket packet)
+        {
+            if (clientId.IsNullOrEmpty()) return await Task.FromResult(false);
+
+            var client = this.Server.Clients.Where(a => a.GetClientData()?.ConnectPacket.ClientId == clientId).First();
+            if (client == null) return await Task.FromResult(false);
+
+            await DisconnectAsync(client, packet);
+            return await Task.FromResult(true);
         }
         #endregion
 

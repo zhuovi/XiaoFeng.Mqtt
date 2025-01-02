@@ -210,6 +210,7 @@ static void w(string msg) => Console.WriteLine($"{DateTime.Now.ToTimeStamp()}: {
 var server = new MqttServer(new IPEndPoint(IPAddress.Any, 1883));
 //添加服务器凭证
 server.AddCredential("admin", "123456", "");
+server.SameClientIdMode = SamClientIdMode.Refused;
 server.OnStarted += o =>
 {
     //服务器启动消息
@@ -278,6 +279,16 @@ static void w(string msg) => Console.WriteLine($"{DateTime.Now.ToTimeStamp()}: {
 
 
 # 版本更新
+
+## 2025-01-02   v 1.0.4
+
+1.增加服务端配置 SameClientIdMode 模式,当客户端ID与已连接的客户端ID相同时的处理方式;
+
+2.优化MqttClient，在断网或连接失败的情况下，优化连接网络;
+
+3.优化输出包字节时，优化包类型不匹配的问题;
+
+4.优化自动连接;
 
 ## 2024-02-19   v 1.0.3
 

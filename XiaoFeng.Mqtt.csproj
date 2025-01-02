@@ -24,7 +24,7 @@
 		<PackageProjectUrl>https://www.eelf.cn</PackageProjectUrl>
 		<PackageIconUrl>http://nuget.fayelf.com/x.png</PackageIconUrl>
 		<PackageTags>XiaoFeng;FAYELF;MQTT;MQTT-SERVER;MQTT-CLIENT;</PackageTags>
-		<PackageReleaseNotes>优化MqttClient，在断网或连接失败的情况下，优化连接网络;优化输出包字节时，优化包类型不匹配的问题;优化自动连接;</PackageReleaseNotes>
+		<PackageReleaseNotes>增加服务端配置 SameClientIdMode 模式,当客户端ID与已连接的客户端ID相同时的处理方式;优化MqttClient，在断网或连接失败的情况下，优化连接网络;优化输出包字节时，优化包类型不匹配的问题;优化自动连接;</PackageReleaseNotes>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<DelaySign>False</DelaySign>
@@ -39,5 +39,5 @@
 	<!--<ItemGroup>
 	  <PackageReference Include="XiaoFeng" Version="5.0.4" />
 	</ItemGroup>-->
-	<Import Project="E:/Work/XiaoFeng.targets"/>
+	<Import Project="E:/Work/XiaoFeng.targets" />
 </Project>
