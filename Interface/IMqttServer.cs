@@ -26,6 +26,10 @@ namespace XiaoFeng.Mqtt
     {
         #region 属性
         /// <summary>
+        /// 客户端Id 存在处理模式
+        /// </summary>
+        SameClientIdMode SameClientIdMode { get; set; }
+        /// <summary>
         /// 配置
         /// </summary>
         MqttServerOptions ServerOptions { get; }

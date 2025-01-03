@@ -522,18 +522,21 @@ namespace XiaoFeng.Mqtt.Server
             {
                 if (this.SameClientIdMode == SameClientIdMode.Refused)
                 {
-                    AckPacket.ReasonCode = result.ReasonCode = ReasonCode.CLIENT_IDENTIFIER_NOT_VALID;
+                    AckPacket.ReasonCode = result.ReasonCode = ReasonCode.PACKET_IDENTIFIER_IN_USE;
                     AckPacket.ReasonString = result.Message = $"Connection Refused: ClientId [{packet.ClientId}] is already connected";
                     await SendAsync(AckPacket, client).ConfigureAwait(false);
                     return result;
                 }
                 else if (this.SameClientIdMode == SameClientIdMode.DisconnectExisting)
                 {
-                    DisconnectAsync(packet.ClientId,client.EndPoint, new DisconnectPacket
+                    Task.Run(() =>
                     {
-                        ReasonCode = ReasonCode.SESSION_TAKEN_OVER,
-                        ReasonString = "Connection failed: Your session client ID is occupied by another client"
-                    }).ConfigureAwait(false).GetAwaiter();
+                      DisconnectAsync(packet.ClientId, client.EndPoint, new DisconnectPacket
+                        {
+                            ReasonCode = ReasonCode.SESSION_TAKEN_OVER,
+                            ReasonString = "Connection failed: Your session client ID is occupied by another client"
+                        }).ConfigureAwait(false).GetAwaiter();
+                    });
                 }
                 else
                 {
@@ -1382,17 +1385,13 @@ namespace XiaoFeng.Mqtt.Server
             if (client != null && client.Active && client.Connected)
             {
                 var ClientData = client.GetClientData()?.ConnectPacket;
-                if (ClientData == null)
+                if (packet is DisconnectPacket)
                 {
-                    if (packet is DisconnectPacket)
-                    {
-                        await client.SendAsync(bytes, MessageType.Binary).ConfigureAwait(false);
-                        this.StopClientAsync(client, 0).ConfigureAwait(false).GetAwaiter();
-                        return true;
-                    }
-                    else
-                        return false;
+                    await client.SendAsync(bytes, MessageType.Binary).ConfigureAwait(false);
+                    this.StopClientAsync(client, 0).ConfigureAwait(false).GetAwaiter();
+                    return true;
                 }
+                if (ClientData == null) return false;
                 MqttHelper.GetPacketSharding(bytes, ClientData.MaximumPacketSize).Each(async bs =>
                 {
                     await client.SendAsync(bs, MessageType.Binary).ConfigureAwait(false);
@@ -1659,7 +1658,11 @@ namespace XiaoFeng.Mqtt.Server
         {
             if (clientId.IsNullOrEmpty()) return await Task.FromResult(false);
 
-            var client = this.Server.Clients.Where(a => a.GetClientData()?.ConnectPacket.ClientId == clientId && a.EndPoint.ToString() != EndPoint.ToString()).First();
+            var client = this.Server.Clients.Where(a => {
+                var data = a.GetClientData();
+                if (data == null || data.ConnectPacket == null) return false;
+                return data.ConnectPacket.ClientId == clientId && a.EndPoint.ToString() != EndPoint.ToString();
+                }).First();
             if (client == null) return await Task.FromResult(false);
 
             await DisconnectAsync(client, packet);
