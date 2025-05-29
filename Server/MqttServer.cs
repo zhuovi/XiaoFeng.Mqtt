@@ -179,7 +179,7 @@ namespace XiaoFeng.Mqtt.Server
             this.Server.OnStart += (o, e) =>
             {
                 this.OnStarted?.Invoke(this);
-                CleanKeepAliveClientAsync().ConfigureAwait(false).GetAwaiter();
+                //CleanKeepAliveClientAsync().ConfigureAwait(false).GetAwaiter();
             };
             this.Server.OnStop += (o, e) =>
             {
@@ -191,26 +191,26 @@ namespace XiaoFeng.Mqtt.Server
             };
             this.Server.OnDisconnected += (c, e) =>
             {
-                Task.Run(() =>
-                {
+                //Task.Run(() =>
+                //{
                     this.RemoveTopicClientAsync(c).ConfigureAwait(false).GetAwaiter();
                     this.OnDisconnected?.Invoke(c);
-                });
+                //});
             };
             this.Server.OnError += (o, e) =>
             {
-                Task.Run(() =>
-                {
+                //Task.Run(() =>
+                //{
                     this.OnError?.Invoke(this, e.Message);
-                });
+                //});
             };
             this.Server.OnNewConnection += (c, e) =>
             {
-                Task.Run(() =>
-                {
+                //Task.Run(() =>
+                //{
                     c.InitClientData();
                     this.OnConnected?.Invoke(c);
-                });
+                //});
             };
             this.Server.OnMessageByte += (c, m, e) =>
             {

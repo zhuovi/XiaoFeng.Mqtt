@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using XiaoFeng.Mqtt.Client;
 using XiaoFeng.Mqtt.Internal;
 using XiaoFeng.Mqtt.Packets;
+using XiaoFeng.Net;
 
 /****************************************************************
 *  Copyright © (2023) www.eelf.cn All Rights Reserved.          *
@@ -76,6 +77,25 @@ namespace XiaoFeng.Mqtt
         #endregion
 
         #region 方法
+        /// <summary>
+        /// 设置服务器地址
+        /// </summary>
+        /// <param name="host">主机</param>
+        /// <param name="port">端口</param>
+        /// <returns></returns>
+        IMqttClient SetAddress(string host, int port);
+        /// <summary>
+        /// 设置服务器地址
+        /// </summary>
+        /// <param name="url">服务器地址</param>
+        /// <returns></returns>
+        IMqttClient SetAddress(string url);
+        /// <summary>
+        /// 设置服务器地址
+        /// </summary>
+        /// <param name="netUri">服务器地址</param>
+        /// <returns></returns>
+        IMqttClient SetAddress(NetUri netUri);
         /// <summary>
         /// 连接服务端
         /// </summary>

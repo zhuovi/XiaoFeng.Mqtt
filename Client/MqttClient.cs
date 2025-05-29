@@ -159,6 +159,40 @@ namespace XiaoFeng.Mqtt.Client
 
         #region 方法
 
+        #region 设置服务器地址
+        /// <summary>
+        /// 设置服务器地址
+        /// </summary>
+        /// <param name="host">主机</param>
+        /// <param name="port">端口</param>
+        /// <returns></returns>
+        public IMqttClient SetAddress(string host,int port)
+        {
+            this.NetUri = new NetUri(NetType.Tcp, host, port);
+            return this;
+        }
+        /// <summary>
+        /// 设置服务器地址
+        /// </summary>
+        /// <param name="url">服务器地址</param>
+        /// <returns></returns>
+        public IMqttClient SetAddress(string url)
+        {
+            this.NetUri = new NetUri(url);
+            return this;
+        }
+        /// <summary>
+        /// 设置服务器地址
+        /// </summary>
+        /// <param name="netUri">服务器地址</param>
+        /// <returns></returns>
+        public IMqttClient SetAddress(NetUri netUri)
+        {
+            this.NetUri = netUri;
+            return this;
+        }
+        #endregion
+
         #region 初始化
         /// <summary>
         /// 获取Socket

@@ -87,7 +87,7 @@ namespace XiaoFeng.Mqtt.Internal
             if (tFilter == "+" && !topicName.Contains("/")) return true;
             if (tFilter.Contains("+"))
             {
-                var topic = tFilter.ReplacePattern(@"+", @"[^/]*").TrimEnd('#');
+                var topic = tFilter.Replace(@"+", @"[^/]*").TrimEnd('#');
                 if (topicName.IsMatch(@"^" + topic)) return true;
             }
             return false;

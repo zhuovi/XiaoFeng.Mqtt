@@ -90,6 +90,12 @@ namespace XiaoFeng.Mqtt.Server
         {
             return new MqttServerTopicMessage(topic, publishPacket, expiredTime);
         }
+        /// <summary>
+        /// 创建主题消息
+        /// </summary>
+        /// <param name="publishPacket">消息</param>
+        /// <param name="expiredTime">过期时间</param>
+        /// <returns></returns>
         public static IMqttServerTopicMessage Create(PublishPacket publishPacket, int expiredTime) => Create(publishPacket.Topic, publishPacket, expiredTime);
         /// <summary>
         /// 主题
