@@ -52,6 +52,10 @@ namespace XiaoFeng.Mqtt.Packets
 
         #region 属性
         /// <summary>
+        /// 消息Id 为了保证发送消息及分发消息的关联性
+        /// </summary>
+        public string MessageId { get; set; }
+        /// <summary>
         /// DUP标志
         /// </summary>
         /// <remarks>

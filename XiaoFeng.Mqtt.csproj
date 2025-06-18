@@ -8,7 +8,7 @@
 		<Copyright>CopyRight @ 2008-2024 魔法精灵(www.eelf.cn) QQ:7092734 Email:jacky@eelf.cn</Copyright>
 		<Company>魔法精灵</Company>
 		<VersionPrefix>1.0</VersionPrefix>
-		<VersionSuffix>5</VersionSuffix>
+		<VersionSuffix>6</VersionSuffix>
 		<Version>$(VersionPrefix).$(VersionSuffix)</Version>
 		<FileVersion>$(Version)</FileVersion>
 		<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
@@ -24,7 +24,7 @@
 		<PackageProjectUrl>https://www.eelf.cn</PackageProjectUrl>
 		<PackageIconUrl>https://www.eelf.cn/x.png</PackageIconUrl>
 		<PackageTags>XiaoFeng;FAYELF;MQTT;MQTT-SERVER;MQTT-CLIENT;</PackageTags>
-		<PackageReleaseNotes>修复 SameClientIdMode 断开时的bug;修复有+的主题,分发的bug;</PackageReleaseNotes>
+		<PackageReleaseNotes>增加服务启动时间;增加消息分发事件;优化保护连接移除过期主题消息;增加清空凭证;修复客户端重连的小bug;</PackageReleaseNotes>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<DelaySign>False</DelaySign>

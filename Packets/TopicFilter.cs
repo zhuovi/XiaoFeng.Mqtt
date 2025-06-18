@@ -171,6 +171,11 @@ namespace XiaoFeng.Mqtt.Packets
                 $"TopicFilter: [Topic={this.Topic}] [QualityOfServiceLevel={this.QualityOfServiceLevel}] [NoLocal={this.NoLocal}] [RetainAsPublished={this.RetainAsPublished}] [RetainHandling={this.RetainHandling}]";
         }
         /// <summary>
+        /// 转换成主题
+        /// </summary>
+        /// <returns></returns>
+        public string ToStringX() => this.Topic;
+        /// <summary>
         /// 重写HashCode
         /// </summary>
         /// <returns></returns>

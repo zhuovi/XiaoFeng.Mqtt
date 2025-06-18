@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Net;
 using XiaoFeng.Mqtt.Packets;
 using XiaoFeng.Mqtt.Server;
 using XiaoFeng.Net;
@@ -39,17 +41,17 @@ namespace XiaoFeng.Mqtt
     /// <summary>
     /// MQTT客户端断开事件
     /// </summary>
-    /// <param name="packet">数据包</param>
+    /// <param name="client">数据包</param>
     public delegate void MqttClientDisconnectedEventHandler(IMqttClient client);
     /// <summary>
     /// MQTT客户端启动事件
     /// </summary>
-    /// <param name="packet">数据包</param>
+    /// <param name="client">数据包</param>
     public delegate void MqttClientStartedEventHandler(IMqttClient client);
     /// <summary>
     /// MQTT客户端停止事件
     /// </summary>
-    /// <param name="packet">数据包</param>
+    /// <param name="client">数据包</param>
     public delegate void MqttClientStopedEventHandler(IMqttClient client);
 
     /// <summary>
@@ -78,6 +80,14 @@ namespace XiaoFeng.Mqtt
     /// <param name="server">MQTT服务端</param>
     /// <param name="message">消息</param>
     public delegate void MqttServerErrorEventHandler(IMqttServer server, string message);
+    /// <summary>
+    /// MQTT服务端消息分发事件
+    /// </summary>
+    /// <param name="server">MQTT服务端</param>
+    /// <param name="publishClient">发送客户端</param>
+    /// <param name="packet">消息包</param>
+    /// <param name="distributeClients">分发客户端</param>
+    public delegate void MqttServerDistributeEventHandler(IMqttServer server, ISocketClient publishClient, PublishPacket packet, List<DistributeData> distributeClients);
     /// <summary>
     /// MQTT客户端错误事件
     /// </summary>

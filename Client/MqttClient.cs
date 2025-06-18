@@ -235,7 +235,7 @@ namespace XiaoFeng.Mqtt.Client
                     this.PingJob = null;
                 }
                 OnStoped?.Invoke(this);
-                if (this.IsAutoConnect && this.ClientOptions.IsAutoConnect)
+                if (this.IsAutoConnect || this.ClientOptions.IsAutoConnect)
                 {
                     await Task.Delay(this.ClientOptions.ReConnectPeriod * 1000).ConfigureAwait(false);
                     await this.ConnectAsync().ConfigureAwait(false);
@@ -492,6 +492,8 @@ namespace XiaoFeng.Mqtt.Client
                     if (!init) return null;
                 }
             }
+            this.ClientOptions.IsAutoConnect = this.IsAutoConnect;
+
             var connPacket = this.ClientOptions as ConnectPacket;
             connPacket.PacketType = PacketType.CONNECT;
             OnMessageAsync(new ResultPacket(connPacket, ResultType.Success, $"Sending {connPacket.PacketType} to server ({connPacket}).")).ConfigureAwait(false).GetAwaiter();

@@ -38,6 +38,8 @@ namespace XiaoFeng.Mqtt.Server
         public MqttServer(IPEndPoint endPoint)
         {
             this.EndPoint = endPoint;
+            this.Address = this.EndPoint.Address;
+            this.Port = this.EndPoint.Port;
         }
         /// <summary>
         /// 监听地址
@@ -48,6 +50,8 @@ namespace XiaoFeng.Mqtt.Server
         {
             if (port <= 0) port = 1883;
             this.EndPoint = new IPEndPoint(host.IsNullOrEmpty() ? IPAddress.Any : IPAddress.Parse(host), port);
+            this.Address = this.EndPoint.Address;
+            this.Port = this.EndPoint.Port;
         }
         /// <summary>
         /// 设置监听端口
@@ -56,6 +60,8 @@ namespace XiaoFeng.Mqtt.Server
         public MqttServer(int port)
         {
             this.EndPoint = new IPEndPoint(IPAddress.Any, port);
+            this.Address = IPAddress.Any;
+            this.Port = port;
         }
         /// <summary>
         /// 设置配置
@@ -69,13 +75,49 @@ namespace XiaoFeng.Mqtt.Server
 
         #region 属性
         /// <summary>
+        /// 监听地址
+        /// </summary>
+        private IPAddress _Address = IPAddress.Any;
+        /// <summary>
+        /// 监听地址
+        /// </summary>
+        public IPAddress Address
+        {
+            get => this._Address;
+            set
+            {
+                this._Address = value;
+                this.EndPoint.Address = value;
+                if (this.Server != null)
+                    this.Server.EndPoint = this.EndPoint;
+            }
+        }
+        /// <summary>
+        /// 端口
+        /// </summary>
+        private int _Port = 1883;
+        /// <summary>
+        /// 监听端口
+        /// </summary>
+        public int Port
+        {
+            get => this._Port;
+            set
+            {
+                this._Port = value;
+                this.EndPoint.Port = value;
+                if (this.Server != null)
+                    this.Server.EndPoint = this.EndPoint;
+            }
+        }
+        /// <summary>
         /// 客户端Id 存在处理模式
         /// </summary>
         public SameClientIdMode SameClientIdMode { get; set; } = SameClientIdMode.Refused;
         /// <summary>
         /// 终节点
         /// </summary>
-        private IPEndPoint EndPoint { get; set; }
+        private IPEndPoint EndPoint { get; set; } = new IPEndPoint(IPAddress.Any, 1883);
         /// <summary>
         /// 服务端
         /// </summary>
@@ -87,7 +129,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 配置
         /// </summary>
-        public MqttServerOptions ServerOptions => this._ServerOptions;
+        public MqttServerOptions ServerOptions => this._ServerOptions == null ? this._ServerOptions = new MqttServerOptions() : this._ServerOptions;
         /// <summary>
         /// MQTT服务器凭证
         /// </summary>
@@ -103,7 +145,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <summary>
         /// 订阅主题客户端
         /// </summary>
-        private ConcurrentDictionary<string, List<ISocketClient>> MqttServerTopicClients { get; set; }
+        public ConcurrentDictionary<string, List<ISocketClient>> MqttServerTopicClients { get; set; }
         /// <summary>
         /// PblishPacket数据包
         /// </summary>
@@ -112,6 +154,18 @@ namespace XiaoFeng.Mqtt.Server
         /// 清理客户端作业
         /// </summary>
         private IJob CleanWorker;
+        /// <summary>
+        /// 启动时间
+        /// </summary>
+        public DateTime StartTime { get; set; }
+        /// <summary>
+        /// 服务状态
+        /// </summary>
+        public SocketState Status => this.Server == null ? SocketState.Idle : this.Server.SocketState;
+        /// <summary>
+        /// 客户端
+        /// </summary>
+        public ICollection<ISocketClient> MqttClients => this.Server?.Clients;
         #endregion
 
         #region 事件
@@ -143,9 +197,24 @@ namespace XiaoFeng.Mqtt.Server
         /// 接收消息事件
         /// </summary>
         public event MqttServerMessageEventHandler OnMessage;
+        /// <summary>
+        /// 分发消息事件
+        /// </summary>
+        public event MqttServerDistributeEventHandler OnDistribute;
         #endregion
 
         #region 方法
+
+        #region 设置配置
+        /// <summary>
+        /// 设置配置
+        /// </summary>
+        /// <param name="options">配置</param>
+        public void SetOptions(MqttServerOptions options)
+        {
+            this._ServerOptions = options;
+        }
+        #endregion
 
         #region 初始化
         /// <summary>
@@ -178,6 +247,7 @@ namespace XiaoFeng.Mqtt.Server
             }
             this.Server.OnStart += (o, e) =>
             {
+                this.StartTime = DateTime.Now;
                 this.OnStarted?.Invoke(this);
                 //CleanKeepAliveClientAsync().ConfigureAwait(false).GetAwaiter();
             };
@@ -191,26 +261,26 @@ namespace XiaoFeng.Mqtt.Server
             };
             this.Server.OnDisconnected += (c, e) =>
             {
-                //Task.Run(() =>
-                //{
+                Task.Run(() =>
+                {
                     this.RemoveTopicClientAsync(c).ConfigureAwait(false).GetAwaiter();
                     this.OnDisconnected?.Invoke(c);
-                //});
+                });
             };
             this.Server.OnError += (o, e) =>
             {
-                //Task.Run(() =>
-                //{
+                Task.Run(() =>
+                {
                     this.OnError?.Invoke(this, e.Message);
-                //});
+                });
             };
             this.Server.OnNewConnection += (c, e) =>
             {
-                //Task.Run(() =>
-                //{
+                Task.Run(() =>
+                {
                     c.InitClientData();
                     this.OnConnected?.Invoke(c);
-                //});
+                });
             };
             this.Server.OnMessageByte += (c, m, e) =>
             {
@@ -1207,83 +1277,92 @@ namespace XiaoFeng.Mqtt.Server
         {
             var cdata = client.GetClientData();
             if (cdata == null || cdata.ConnectPacket == null) await Task.CompletedTask;
-            this.MqttServerTopicClients.Each(tc =>
+            await Task.Run(() =>
             {
-                if (tc.Value == null || tc.Value.Count == 0)
+                var distributeData = new List<DistributeData>();
+                this.MqttServerTopicClients.Each(tc =>
                 {
-                    this.MqttServerTopicClients.TryRemove(tc.Key, out var _);
-                    return true;
-                }
-                var IsContains = MqttHelper.IsContainsTopic(tc.Key, packet.Topic, this.ServerOptions.WildcardSubscriptionAvailable);
-                if (IsContains)
-                {
-                    var indexs = new List<int>();
-                    for (var i = 0; i < tc.Value.Count; i++)
-                    {
-                        var c = tc.Value[i];
-                        if (!c.Connected)
-                        {
-                            c.Stop();
-                            indexs.Add(i);
-                            continue;
-                        }
-                        var cData = c.GetClientData();
-                        if (cData == null || cData.ConnectPacket == null || cData.TopicFilters == null || cData.TopicFilters.Count == 0)
-                        {
-                            indexs.Add(i);
-                            continue;
-                        }
-                    }
-                    if (indexs.Count > 0)
-                    {
-                        indexs.Sort();
-                        for (var i = indexs.Count - 1; i >= 0; i--)
-                            tc.Value.RemoveAt(indexs[i]);
-                    }
-                    if (tc.Value.Count == 0)
+                    if (tc.Value == null || tc.Value.Count == 0)
                     {
                         this.MqttServerTopicClients.TryRemove(tc.Key, out var _);
                         return true;
                     }
-                    if (MqttHelper.IsSharedTopicFilter(tc.Key))
+                    var IsContains = MqttHelper.IsContainsTopic(tc.Key, packet.Topic, this.ServerOptions.WildcardSubscriptionAvailable);
+                    if (IsContains)
                     {
-                        var cs = tc.Value.Where(a => a.EndPoint.ToString() != client.EndPoint.ToString()).ToArray();
-                        var c = cs[RandomHelper.GetRandomInt(0, tc.Value.Count - (cs.Length == tc.Value.Count ? 1 : 2))];
-                        var connpacket = c.GetClientData().ConnectPacket;
-                        var result = new ResultPacket(packet, ResultType.Error, "");
-                        packet.ProtocolVersion = connpacket.ProtocolVersion;
-                        var flags = SendAsync(packet, c).ConfigureAwait(false).GetAwaiter().GetResult();
-                        if (flags)
+                        var indexs = new List<int>();
+                        for (var i = 0; i < tc.Value.Count; i++)
                         {
-                            result.ResultType = ResultType.Success;
-                            result.Message = $"Sending PUBLISH to {connpacket.ClientId} ({packet})";
+                            var c = tc.Value[i];
+                            if (!c.Connected)
+                            {
+                                c.Stop();
+                                indexs.Add(i);
+                                continue;
+                            }
+                            var cData = c.GetClientData();
+                            if (cData == null || cData.ConnectPacket == null || cData.TopicFilters == null || cData.TopicFilters.Count == 0)
+                            {
+                                indexs.Add(i);
+                                continue;
+                            }
                         }
-                        else
-                            result.Message = $"Sending PUBLISH to {connpacket.ClientId} failed.";
-                        OnMessageAsync(c, result).ConfigureAwait(false).GetAwaiter();
-                        return true;
+                        if (indexs.Count > 0)
+                        {
+                            indexs.Sort();
+                            for (var i = indexs.Count - 1; i >= 0; i--)
+                                tc.Value.RemoveAt(indexs[i]);
+                        }
+                        if (tc.Value.Count == 0)
+                        {
+                            this.MqttServerTopicClients.TryRemove(tc.Key, out var _);
+                            return true;
+                        }
+                        if (MqttHelper.IsSharedTopicFilter(tc.Key))
+                        {
+                            var cs = tc.Value.Where(a => a.EndPoint.ToString() != client.EndPoint.ToString()).ToArray();
+                            var c = cs[RandomHelper.GetRandomInt(0, tc.Value.Count - (cs.Length == tc.Value.Count ? 1 : 2))];
+                            var connpacket = c.GetClientData().ConnectPacket;
+                            var result = new ResultPacket(packet, ResultType.Error, "");
+                            packet.ProtocolVersion = connpacket.ProtocolVersion;
+                            var flags = SendAsync(packet, c).ConfigureAwait(false).GetAwaiter().GetResult();
+                            if (flags)
+                            {
+                                result.ResultType = ResultType.Success;
+                                result.Message = $"Sending PUBLISH to {connpacket.ClientId} ({packet})";
+                            }
+                            else
+                                result.Message = $"Sending PUBLISH to {connpacket.ClientId} failed.";
+                            OnMessageAsync(c, result).ConfigureAwait(false).GetAwaiter();
+                            return true;
+                        }
+                        tc.Value.Each(c =>
+                        {
+                            if (c.EndPoint.ToString() == client.EndPoint.ToString()) return;
+                            var connPacket = c.GetClientData().ConnectPacket;
+                            var result = new ResultPacket(packet, ResultType.Error, "");
+                            packet.ProtocolVersion = connPacket.ProtocolVersion;
+                            var flags = SendAsync(packet, c).ConfigureAwait(false).GetAwaiter().GetResult();
+                            if (flags)
+                            {
+                                result.ResultType = ResultType.Success;
+                                result.Message = $"Sending PUBLISH to {connPacket.ClientId} ({packet})";
+                            }
+                            else
+                                result.Message = $"Sending PUBLISH to {connPacket.ClientId} failed.";
+                            distributeData.Add(new DistributeData
+                            {
+                                Client = c,
+                                Topic = tc.Key,
+                                Status = flags
+                            });
+                            OnMessageAsync(c, result).ConfigureAwait(false).GetAwaiter();
+                        });
                     }
-
-                    tc.Value.Each(c =>
-                    {
-                        if (c.EndPoint.ToString() == client.EndPoint.ToString()) return;
-                        var connPacket = c.GetClientData().ConnectPacket;
-                        var result = new ResultPacket(packet, ResultType.Error, "");
-                        packet.ProtocolVersion = connPacket.ProtocolVersion;
-                        var flags = SendAsync(packet, c).ConfigureAwait(false).GetAwaiter().GetResult();
-                        if (flags)
-                        {
-                            result.ResultType = ResultType.Success;
-                            result.Message = $"Sending PUBLISH to {connPacket.ClientId} ({packet})";
-                        }
-                        else
-                            result.Message = $"Sending PUBLISH to {connPacket.ClientId} failed.";
-                        OnMessageAsync(c, result).ConfigureAwait(false).GetAwaiter();
-                    });
-                }
-                return true;
+                    return true;
+                });
+                OnDistribute?.Invoke(this, client, packet, distributeData);
             });
-
             /*
             var IsSendShare = false;
             this.Server.Clients.Each(async c =>
@@ -1327,11 +1406,23 @@ namespace XiaoFeng.Mqtt.Server
         public async Task<bool> SavePublishAsync(PublishPacket packet)
         {
             if (!this.ServerOptions.RetainAvailable || !packet.Retain) return await Task.FromResult(false);
-            if (this.MqttServerTopicMessages == null)
-                this.MqttServerTopicMessages = new ConcurrentDictionary<string, IMqttServerTopicMessage>();
-            var topicMessage = MqttServerTopicMessage.Create(packet, DateTime.Now.ToTimeStamp() + this.ServerOptions.TopicFilterExpireInterval);
-            this.MqttServerTopicMessages.AddOrUpdate(packet.Topic, topicMessage, (key, old) => topicMessage);
-            return await Task.FromResult(true);
+            return await Task.Run(() =>
+            {
+                if (this.MqttServerTopicMessages == null)
+                    this.MqttServerTopicMessages = new ConcurrentDictionary<string, IMqttServerTopicMessage>();
+                var nowTime = DateTime.Now.ToTimeStamp();
+                var topicMessage = MqttServerTopicMessage.Create(packet, nowTime + this.ServerOptions.TopicFilterExpireInterval);
+                this.MqttServerTopicMessages.AddOrUpdate(packet.Topic, topicMessage, (key, old) => topicMessage);
+                //移除过期主题消息
+                this.MqttServerTopicMessages.Keys.Each(a =>
+                {
+                    if (this.MqttServerTopicMessages.TryGetValue(a, out var value))
+                    {
+                        if (value.ExpiredTime <= nowTime || value.DistributeCount> this.ServerOptions.MaximumDistribute) this.MqttServerTopicMessages.TryRemove(a, out var _);
+                    }
+                });
+                return true;
+            });
         }
         #endregion
 
@@ -1345,28 +1436,42 @@ namespace XiaoFeng.Mqtt.Server
         public async Task<bool> SendPublishAsync(ISocketClient client, TopicFilter topicFilter)
         {
             if (!this.ServerOptions.RetainAvailable || this.MqttServerTopicMessages == null || this.MqttServerTopicMessages.Count == 0 || !MqttHelper.IsValidTopicFilter(topicFilter.Topic)) return await Task.FromResult(false);
-
-            this.MqttServerTopicMessages.Each(m =>
+            return await Task.Run(() =>
             {
-                var topic = m.Key;
-                var msg = m.Value;
-                var packet = msg.PublishPacket;
-                if (MqttHelper.IsContainsTopic(topicFilter.Topic, topic, this.ServerOptions.WildcardSubscriptionAvailable) && topicFilter.QualityOfServiceLevel <= packet.QualityOfServiceLevel)
+                this.MqttServerTopicMessages.Each(async m =>
                 {
-                    packet.ProtocolVersion = client.GetClientData().ConnectPacket.ProtocolVersion;
-                    this.SendAsync(packet, client).ConfigureAwait(false).GetAwaiter();
-                    if (packet.QualityOfServiceLevel == QualityOfServiceLevel.AtMostOnce || packet.QualityOfServiceLevel == QualityOfServiceLevel.ExactlyOnce || msg.DistributeCount > this.ServerOptions.MaximumDistribute)
-                        this.MqttServerTopicMessages.TryRemove(topic, out _);
+                    var topic = m.Key;
+                    var msg = m.Value;
+                    var packet = msg.PublishPacket;
+                    if (MqttHelper.IsContainsTopic(topicFilter.Topic, topic, this.ServerOptions.WildcardSubscriptionAvailable) && topicFilter.QualityOfServiceLevel <= packet.QualityOfServiceLevel)
+                    {
+                        packet.ProtocolVersion = client.GetClientData().ConnectPacket.ProtocolVersion;
+                        var flag = await this.SendAsync(packet, client).ConfigureAwait(false);
+
+                        if (packet.QualityOfServiceLevel == QualityOfServiceLevel.AtMostOnce || packet.QualityOfServiceLevel == QualityOfServiceLevel.ExactlyOnce || msg.DistributeCount > this.ServerOptions.MaximumDistribute)
+                            this.MqttServerTopicMessages.TryRemove(topic, out _);
+                        else
+                            msg.AddDistributeCount();
+
+                        var distributeData = new ConcurrentDictionary<ISocketClient, bool>();
+                        distributeData.TryAdd(client, flag);
+                        OnDistribute?.Invoke(this, client, packet, new List<DistributeData>
+                        {
+                            new DistributeData
+                            {
+                                Topic = topicFilter.Topic,
+                                Client=client,Status=flag
+                            }
+                        });
+                    }
                     else
-                        msg.AddDistributeCount();
-                }
-                else
-                {
-                    if (msg.ExpiredTime < DateTime.Now.ToTimeStamp() || msg.DistributeCount > this.ServerOptions.MaximumDistribute)
-                        this.MqttServerTopicMessages.TryRemove(topic, out _);
-                }
+                    {
+                        if (msg.ExpiredTime < DateTime.Now.ToTimeStamp() || msg.DistributeCount > this.ServerOptions.MaximumDistribute)
+                            this.MqttServerTopicMessages.TryRemove(topic, out _);
+                    }
+                });
+                return true;
             });
-            return await Task.FromResult(true);
         }
         #endregion
 
@@ -1490,6 +1595,14 @@ namespace XiaoFeng.Mqtt.Server
             if (this.MqttServerCredentials == null || userName.IsNullOrEmpty()) return false;
             return this.MqttServerCredentials.TryRemove(userName, out var _);
         }
+        /// <summary>
+        /// 清空凭证
+        /// </summary>
+        public void ClearCredential()
+        {
+            if (this.MqttServerCredentials == null) return;
+            this.MqttServerCredentials.Clear();
+        }
         #endregion
 
         #region 服务器转移到其它服务器
@@ -1600,7 +1713,7 @@ namespace XiaoFeng.Mqtt.Server
         /// <param name="client">MQTT客户端</param>
         /// <param name="result">结果包</param>
         /// <returns></returns>
-        public async Task OnMessageAsync(ISocketClient client,ResultPacket result)
+        public async Task OnMessageAsync(ISocketClient client, ResultPacket result)
         {
             if (OnMessage == null) return;
             await Task.Run(() =>
@@ -1623,13 +1736,14 @@ namespace XiaoFeng.Mqtt.Server
             if (this.CleanWorker == null)
             {
                 if (this.ServerOptions.ServerKeepAlive == 0)
-                    this.ServerOptions.ServerKeepAlive = 60;
+                    this.ServerOptions.ServerKeepAlive = 120;
                 this.CleanWorker = new Job().SetName("CleanKeepAliveClient").Interval(this.ServerOptions.ServerKeepAlive * 1000).SetCompleteCallBack(job =>
                 {
                     this.Server.Clients.Each(c =>
                     {
                         if (!c.Connected) return;
-                        if (c.LastMessageTime.AddSeconds(this.ServerOptions.ServerKeepAlive) < DateTime.Now)
+                        var data = c.GetClientData();
+                        if (c.LastMessageTime.AddSeconds(Math.Max(this.ServerOptions.ServerKeepAlive, data.ConnectPacket.KeepAlive)) < DateTime.Now)
                         {
                             var DisconnPacket = new DisconnectPacket()
                             {

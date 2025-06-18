@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using XiaoFeng.Mqtt.Packets;
@@ -26,6 +27,14 @@ namespace XiaoFeng.Mqtt
     {
         #region 属性
         /// <summary>
+        /// 监听地址
+        /// </summary>
+        IPAddress Address { get; set; }
+        /// <summary>
+        /// 监听端口
+        /// </summary>
+        int Port { get; set; }
+        /// <summary>
         /// 客户端Id 存在处理模式
         /// </summary>
         SameClientIdMode SameClientIdMode { get; set; }
@@ -37,6 +46,26 @@ namespace XiaoFeng.Mqtt
         /// MQTT服务端主题消息
         /// </summary>
         ConcurrentDictionary<string, IMqttServerTopicMessage> MqttServerTopicMessages { get; set; }
+        /// <summary>
+        /// MQTT服务器凭证
+        /// </summary>
+        ICollection<IMqttServerCredential> Credentials { get; }
+        /// <summary>
+        /// 订阅主题客户端
+        /// </summary>
+        ConcurrentDictionary<string, List<ISocketClient>> MqttServerTopicClients { get; set; }
+        /// <summary>
+        /// 启动时间
+        /// </summary>
+        DateTime StartTime { get; set; }
+        /// <summary>
+        /// 服务状态
+        /// </summary>
+        SocketState Status { get; }
+        /// <summary>
+        /// 客户端
+        /// </summary>
+        ICollection<ISocketClient> MqttClients { get; }
         #endregion
 
         #region 事件
@@ -68,9 +97,18 @@ namespace XiaoFeng.Mqtt
         /// 接收消息事件
         /// </summary>
         event MqttServerMessageEventHandler OnMessage;
+        /// <summary>
+        /// 分发消息事件
+        /// </summary>
+        event MqttServerDistributeEventHandler OnDistribute;
         #endregion
 
         #region 方法
+        /// <summary>
+        /// 设置配置
+        /// </summary>
+        /// <param name="options">配置</param>
+        void SetOptions(MqttServerOptions options);
         /// <summary>
         /// 启动
         /// </summary>
@@ -216,6 +254,10 @@ namespace XiaoFeng.Mqtt
         /// <param name="userName">账号</param>
         /// <returns></returns>
         bool RemoveCredential(string userName);
+        /// <summary>
+        /// 清空凭证
+        /// </summary>
+        void ClearCredential();
         /// <summary>
         /// 释放
         /// </summary>
