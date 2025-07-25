@@ -19,6 +19,12 @@ namespace XiaoFeng.Mqtt
     /// </summary>
     public sealed class MqttUserProperty
     {
+        /// <summary>
+        /// 初始化一个新实例
+        /// </summary>
+        /// <param name="name">名称</param>
+        /// <param name="value">值</param>
+        /// <exception cref="ArgumentNullException">参数空异常</exception>
         public MqttUserProperty(string name, string value)
         {
             if (name.IsNullOrEmpty()) throw new ArgumentNullException(nameof(name));

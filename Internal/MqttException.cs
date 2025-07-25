@@ -27,7 +27,16 @@ namespace XiaoFeng.Mqtt
         {
 
         }
+        /// <summary>
+        /// 初如化一个新实例
+        /// </summary>
+        /// <param name="message">消息</param>
         public MqttException(string message):base(message) { }
+        /// <summary>
+        /// 初如化一个新实例
+        /// </summary>
+        /// <param name="message">消息</param>
+        /// <param name="ex">异常</param>
         public MqttException(string message, Exception ex) : base(message, ex) { }
         #endregion
 

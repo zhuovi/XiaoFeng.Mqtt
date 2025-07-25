@@ -280,6 +280,7 @@ namespace XiaoFeng.Mqtt.Internal
         /// 写固定标头
         /// </summary>
         /// <param name="packetType">报文类型</param>
+        /// <param name="flags">标识</param>
         public virtual void WriteFixedHeader(PacketType packetType, int flags = 0)
         {
             var fixedHeader = this.BuildFixedHeader(packetType, flags);

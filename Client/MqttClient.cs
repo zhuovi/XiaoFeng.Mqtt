@@ -558,6 +558,7 @@ namespace XiaoFeng.Mqtt.Client
             this.Client.ReceviceDataAsync().ConfigureAwait(false).GetAwaiter();
             this.PingWorker();
             this.ReSubscributeAsync().ConfigureAwait(false).GetAwaiter();
+            OnConnected?.Invoke(this);
             return await Task.FromResult(connAct);
         }
         #endregion
@@ -596,7 +597,10 @@ namespace XiaoFeng.Mqtt.Client
             if (this.ClientOptions.KeepAlive < 5) this.ClientOptions.KeepAlive = 5;
             this.PingJob = new Job().SetName("EELF_MQTT_Worker").Interval((int)this.ClientOptions.KeepAlive * 1000, async job =>
             {
-                await this.PingAsync().ConfigureAwait(false);
+                if (this.Connected)
+                    await this.PingAsync().ConfigureAwait(false);
+                else
+                    job.Stop();
             }).SetStartTime(DateTime.Now.AddMilliseconds(this.ClientOptions.KeepAlive));
             this.PingJob.Start();
         }
@@ -915,6 +919,7 @@ namespace XiaoFeng.Mqtt.Client
                 this.PingJob.Stop();
                 this.PingJob = null;
             }
+            OnDisconnected?.Invoke(this);
         }
         #endregion
 

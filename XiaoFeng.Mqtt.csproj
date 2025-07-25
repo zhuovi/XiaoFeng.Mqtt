@@ -24,7 +24,7 @@
 		<PackageProjectUrl>https://www.eelf.cn</PackageProjectUrl>
 		<PackageIconUrl>https://www.eelf.cn/x.png</PackageIconUrl>
 		<PackageTags>XiaoFeng;FAYELF;MQTT;MQTT-SERVER;MQTT-CLIENT;</PackageTags>
-		<PackageReleaseNotes>增加服务启动时间;增加消息分发事件;优化保护连接移除过期主题消息;增加清空凭证;修复客户端重连的小bug;</PackageReleaseNotes>
+		<PackageReleaseNotes>增加服务启动时间;增加消息分发事件;优化保护连接移除过期主题消息;增加清空凭证;修复客户端重连的小bug;优化MqttClient连接成功事件,断开事件;</PackageReleaseNotes>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<DelaySign>False</DelaySign>
