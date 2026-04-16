@@ -253,32 +253,32 @@ namespace XiaoFeng.Mqtt.Client
             if (this.ClientOptions == null)
             {
                 this.ClientOptions = new MqttClientOptions();
-                if (this.NetUri.UserName.IsNotNullOrEmpty())
-                    this.ClientOptions.UserName = this.NetUri.UserName;
-                if (this.NetUri.Password.IsNotNullOrEmpty())
-                    this.ClientOptions.Password = this.NetUri.Password;
-                if (this.NetUri.NetType.IsDefined<SslAttribute>())
-                    this.ClientOptions.UseTls = true;
-                var paramer = this.NetUri.Parameters;
-                if (paramer != null && paramer.Count > 0)
-                {
-                    if (paramer.Contains("connecttimeout"))
-                        this.ClientOptions.Timeout = TimeSpan.FromSeconds(paramer["connecttimeout"].ToCast(10));
-                    if (paramer.Contains("keepalive"))
-                        this.ClientOptions.KeepAlive = paramer["keepalive"].ToCast<ushort>(10);
-                    if (paramer.Contains("maxpacketsize"))
-                        this.ClientOptions.MaximumPacketSize = paramer["maxpacketsize"].ToCast(0U);
-                    if (paramer.Contains("maxqos"))
-                        this.ClientOptions.WillQoS = paramer["maxqos"].ToCast<QualityOfServiceLevel>();
-                    if (paramer.Contains("readtimeout"))
-                        this.ClientOptions.ReadTimeout = paramer["readtimeout"].ToCast(10);
-                    if (paramer.Contains("writetimeout"))
-                        this.ClientOptions.WriteTimeout = paramer["writetimeout"].ToCast(10);
-                    if (paramer.Contains("writebuffersize"))
-                        this.ClientOptions.WriteBufferSize = paramer["writebuffersize"].ToCast(8192);
-                    if (paramer.Contains("readbuffersize"))
-                        this.ClientOptions.ReadeBufferSize = paramer["readbuffersize"].ToCast(8192);
-                }
+            }
+            if (this.NetUri.UserName.IsNotNullOrEmpty())
+                this.ClientOptions.UserName = this.NetUri.UserName;
+            if (this.NetUri.Password.IsNotNullOrEmpty())
+                this.ClientOptions.Password = this.NetUri.Password;
+            if (this.NetUri.NetType.IsDefined<SslAttribute>())
+                this.ClientOptions.UseTls = true;
+            var paramer = this.NetUri.Parameters;
+            if (paramer != null && paramer.Count > 0)
+            {
+                if (paramer.Contains("connecttimeout"))
+                    this.ClientOptions.Timeout = TimeSpan.FromSeconds(paramer["connecttimeout"].ToCast(10));
+                if (paramer.Contains("keepalive"))
+                    this.ClientOptions.KeepAlive = paramer["keepalive"].ToCast<ushort>(10);
+                if (paramer.Contains("maxpacketsize"))
+                    this.ClientOptions.MaximumPacketSize = paramer["maxpacketsize"].ToCast(0U);
+                if (paramer.Contains("maxqos"))
+                    this.ClientOptions.WillQoS = paramer["maxqos"].ToCast<QualityOfServiceLevel>();
+                if (paramer.Contains("readtimeout"))
+                    this.ClientOptions.ReadTimeout = paramer["readtimeout"].ToCast(10);
+                if (paramer.Contains("writetimeout"))
+                    this.ClientOptions.WriteTimeout = paramer["writetimeout"].ToCast(10);
+                if (paramer.Contains("writebuffersize"))
+                    this.ClientOptions.WriteBufferSize = paramer["writebuffersize"].ToCast(8192);
+                if (paramer.Contains("readbuffersize"))
+                    this.ClientOptions.ReadeBufferSize = paramer["readbuffersize"].ToCast(8192);
             }
             if (this.Client == null)
             {
